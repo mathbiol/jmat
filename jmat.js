@@ -1,4 +1,4 @@
 // jmat
-// diferent edit from git tortoise to test merge
+// commit from tortoise
 
 console.log('jmat :-)')
