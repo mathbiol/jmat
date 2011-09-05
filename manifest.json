@@ -7,7 +7,7 @@
   },
   "app": {
     "launch": {
-      "web_url": "http://jmat.googlecode.com/hg/jmat.html"
+      "web_url": "http://jmat.googlecode.com/git/jmat.html"
     }
   }
 }
