@@ -73,7 +73,10 @@ jmat = {
 	parse:function(x){
 		eval('var res='+x);
 		return res;
+	},
+	
+	gId:function(x){
+		return document.getElementById(x)
 	}
-
 
 }
