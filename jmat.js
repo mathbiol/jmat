@@ -101,8 +101,12 @@ jmat = {
 		else{return Math.log(x)/Math.log(n)}
 	},
 	
-	toBin:function(x,n){
-		if(!n){n=this.log(x,2)+1};
+	str2num:function(x){
+		return JSON.parse(x);
+	},
+	
+	dec2bin:function(x,n){
+		if(!n){n=Math.ceil(this.log(x,2))+1};
 		var b='';
 		for(i=n-1;i>=0;i=i-1){
 			m=Math.pow(2,i);
@@ -111,6 +115,13 @@ jmat = {
 		};
 		return b
 	},
+	
+	bin2dec:function(x){
+		var n=x.length;
+		return x.split('').map(function(xi,i){return xi*Math.pow(2,n-i-1)}).reduce(function(a,b){return a+b});
+	},
+	
+	
 	
 	cat:function(x,y){ // cat will work for matrices and objects
 		x=this.stringify(x);
@@ -124,6 +135,14 @@ jmat = {
 		return n
 	},
 	
+	load:function(fname){
+		var s = document.createElement('script');
+		s.src=fname;
+		s.id = this.uid();
+		document.body.appendChild(s);
+		setTimeout('document.body.removeChild(document.getElementById("'+s.id+'"));',30000); // is the waiting still needed ?
+	},
+	
 	array2mat:function(x){ // to handle indexed arrays by converting them into two separate numerically indexed arrays
 		var j = 0, y1=[], y2=[];
 		for(var i in x){
@@ -132,6 +151,26 @@ jmat = {
 			j=j+1;
 		}	
 		return [y1,y2]	
-	}
+	},
 	
+	array2str:function(x,sp){ // convert array into a sp separated
+		if (!sp){sp='\n'}
+		y=x[0];
+		for (var i=1;i<x.length;i++){
+			y=y+sp+x[i];
+		}
+		return y
+	},
+	
+	get:function(url,callback){ // get content at url
+		if (!callback){callback=function(x){console.log(x)}}
+		var uid = this.uid();
+		if(!this.get.jobs){this.get.jobs=[]}
+		this.get.jobs[uid]={fun:callback};
+		url='http://sandbox1.mathbiol.org/webrw.php?get='+url+'&callback=jmat.get.jobs.'+uid+'.fun';
+		s=document.createElement('script');
+		s.id = uid;s.src=url;
+		document.body.appendChild(s);
+		setTimeout('document.body.removeChild(document.getElementById("'+uid+'"));delete mat.jobs.'+uid+';',10000); // is the waiting still
+	}
 }
