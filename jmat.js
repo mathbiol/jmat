@@ -31,11 +31,9 @@ jmat = {
 	},
 
 	sort:function (x){ // [y,I]=sort(x), where y is the sorted array and I contains the indexes
-		var y = new Array;
-		for(var i =0;i<x.length;i++){y[i]=i} // indexes
-		y=y.map(function(i){return [x[i],i]});
-		y.sort(function(a,b){return a[0]-b[0]});	
-		return this.transpose(y)
+		x=x.map(function(xi,i){return [xi,i]});
+		x.sort(function(a,b){return a[0]-b[0]});	
+		return this.transpose(x)
 	},
 	
 	stringify:function(x){ // extends JSON.stringify to work with both values and functions
@@ -168,9 +166,10 @@ jmat = {
 		if(!this.get.jobs){this.get.jobs=[]}
 		this.get.jobs[uid]={fun:callback};
 		url='http://sandbox1.mathbiol.org/webrw.php?get='+url+'&callback=jmat.get.jobs.'+uid+'.fun';
-		s=document.createElement('script');
+		var s=document.createElement('script');
 		s.id = uid;s.src=url;
 		document.body.appendChild(s);
-		setTimeout('document.body.removeChild(document.getElementById("'+uid+'"));delete mat.jobs.'+uid+';',10000); // is the waiting still
+		setTimeout('document.body.removeChild(document.getElementById("'+uid+'"));delete jmat.get.jobs.'+uid+';',10000); // is the waiting still need ? script onload would be another possibility to delete it
+		return uid;
 	}
 }
