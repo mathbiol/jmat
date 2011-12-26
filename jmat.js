@@ -74,7 +74,14 @@ jmat = {
 	},
 	
 	gId:function(x){ // x is the id of an existing DOM element
-		return document.getElementById(x)
+		// return null if neither id nor class are found
+		// so constructs like !jmat.gId(someID) can be used
+		var y=document.getElementById(x);
+		if(!y){
+			var z=document.getElementById(x);
+			if(z.length>0){return z}
+			else{return y}
+		}
 	},
 	
 	unique:function(x){ // x is an Array
