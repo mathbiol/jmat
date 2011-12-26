@@ -133,9 +133,9 @@ jmat = {
 		return n
 	},
 	
-	load:function(fname){
+	load:function(url){
 		var s = document.createElement('script');
-		s.src=fname;
+		s.src=url;
 		s.id = this.uid();
 		document.body.appendChild(s);
 		setTimeout('document.body.removeChild(document.getElementById("'+s.id+'"));',30000); // is the waiting still needed ?
@@ -160,16 +160,60 @@ jmat = {
 		return y
 	},
 	
-	get:function(url,callback){ // get content at url
+	webrwUrl:'http://sandbox1.mathbiol.org',
+	
+	get:function(key,callback,url){ // get content at url or key
 		if (!callback){callback=function(x){console.log(x)}}
+		if (!url){url=this.webrwUrl};
 		var uid = this.uid();
 		if(!this.get.jobs){this.get.jobs=[]}
-		this.get.jobs[uid]={fun:callback};
-		url='http://sandbox1.mathbiol.org/webrw.php?get='+url+'&callback=jmat.get.jobs.'+uid+'.fun';
+		this.get.jobs[uid]={'fun':callback};
+		var url=url+'/webrw.php?get='+key+'&callback=jmat.get.jobs.'+uid+'.fun';
 		var s=document.createElement('script');
 		s.id = uid;s.src=url;
 		document.body.appendChild(s);
 		setTimeout('document.body.removeChild(document.getElementById("'+uid+'"));delete jmat.get.jobs.'+uid+';',10000); // is the waiting still need ? script onload would be another possibility to delete it
 		return uid;
+	},
+	
+	
+	set:function(val,callback,key,url){ // set key-val pairs in the webrw endpoint, calback will have the key as its argument
+		if (!callback){callback=function(x){console.log(x)}};
+		if (typeof(val)!='string'){this.stringify(val)};
+		if (!url){url=this.webrwUrl}
+		if(!this.set.jobs){this.set.jobs=[]}
+		var uid = this.uid();
+		this.set.jobs[uid]={'fun':callback};
+		var s=document.createElement('script');s.id=uid;
+		if (!key){s.src=url+'/webrw.php?set='+val+'&callback=jmat.set.jobs.'+uid+'.fun'}
+		else{s.src=url+'/webrw.php?set='+val+'&key='+key+'&callback=jmat.set.jobs.'+uid+'.fun'}
+		document.body.appendChild(s);
+		setTimeout('document.body.removeChild(document.getElementById("'+uid+'"));delete jmat.set.jobs.'+uid+';',10000);
+		return uid;
+	},
+	
+	reval:function(x,fun,callback,url){ 
+		if (!Array.isArray(x)){x=[x]} // make sure x is an array
+		if (!Array.isArray(fun)){fun=[fun]} // make sure it is an array of functions
+		if (!url){url=this.webrwUrl};
+		//if (!Array.isArray(fun)){fun=[fun]} // make sure it is an array of functions
+		// create webrw jobList
+		if (!this.reval.jobs){this.reval.jobs=[]}
+		var uid = this.uid();
+		this.reval.jobs[uid]={fun:fun,x:x,callback:callback,url:url}
+		//match x and fun dimensions
+		var n = Math.max(jmat.reval.jobs[uid].x.length,jmat.reval.jobs[uid].fun.length);
+		for (var i=jmat.reval.jobs[uid].x.length;i<n;i++){jmat.reval.jobs[uid].x[i]=jmat.reval.jobs[uid].x[i-1]}
+		for (var i=jmat.reval.jobs[uid].fun.length;i<n;i++){jmat.reval.jobs[uid].fun[i]=jmat.reval.jobs[uid].fun[i-1]}
+		this.set('if(!window.jmatReval){jmatReval=[]};jmatReval["'+uid+'"]={ jobs:'+jmat.stringify(jmat.reval.jobs[uid])+'};',this.parse('function(key){jmat.reval.jobs.'+uid+'.key=key;jmat.revalSet("'+uid+'");}'),undefined,url);
+	},
+	
+	revalSet:function(uid){ // set job for remote evaluation, task is the key of the webrw document aggregating individual jobs
+		console.log('remote eval of '+uid+' at '+jmat.reval.jobs[uid].url+'/doc/'+jmat.reval.jobs[uid].key);
+		console.log(uid);
+	},
+	
+	revalGet:function(task){ //
+		4;
 	}
 }
