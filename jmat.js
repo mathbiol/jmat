@@ -84,6 +84,15 @@ jmat = {
 		}
 	},
 	
+	fieldnames:function(x){
+		y=[];i=0;
+		for(var f in x){
+			y[i]=f;
+			i++;
+		}
+		return y;
+	},
+	
 	unique:function(x){ // x is an Array
 		var u = []; // store unique here
 		u[0]=x[0];
