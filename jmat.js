@@ -76,13 +76,14 @@ jmat = {
 	gId:function(x){ // x is the id of an existing DOM element
 		// return null if neither id nor class are found
 		// so constructs like !jmat.gId(someID) can be used
-		var y=document.getElementById(x);
-		if(!y){
-			var z=document.getElementsByClassName(x);
-			if(z.length>0){return z}
-			else{return y}
-		}
-		else{return y}
+		//var y=document.getElementById(x);
+		//if(!y){
+		//	var z=document.getElementsByClassName(x);
+		//	if(z.length>0){return z}
+		//	else{return y}
+		//}
+		//else{return y}
+		return document.getElementById(x)
 	},
 	
 	fieldnames:function(x){
