@@ -78,10 +78,11 @@ jmat = {
 		// so constructs like !jmat.gId(someID) can be used
 		var y=document.getElementById(x);
 		if(!y){
-			var z=document.getElementById(x);
+			var z=document.getElementsByClassName(x);
 			if(z.length>0){return z}
 			else{return y}
 		}
+		else{return y}
 	},
 	
 	fieldnames:function(x){
@@ -91,6 +92,12 @@ jmat = {
 			i++;
 		}
 		return y;
+	},
+	
+	cEl:function(x,id){
+		x = document.createElement(x);
+		if(id){x.id=id}
+		return x
 	},
 	
 	unique:function(x){ // x is an Array
