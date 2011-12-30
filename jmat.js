@@ -38,6 +38,19 @@ cEl:function(x,id){
 	return x
 },
 
+clone:function(x){ // clone object without functional elements
+	return JSON.parse(JSON.stringify(x))
+},
+
+clone2:function(x){ // clone object that may have functional elements
+	return jmat.parse(jmat.stringify(x))
+},
+
+cloneArray:function(A){
+	if(Array.isArray(A)){return A.map(function(x){return jmat.cloneArray(x)})}
+	else{return A}
+},
+
 data2imData:function(data){ // the reverse of im2data, data is a matlabish set of 4 2d matrices, with the r, g, b and alpha values
 	var n=data.length, m=data[0].length;
 	//var imData = {width:m, height:n, data:[]};
@@ -64,6 +77,10 @@ dec2bin:function(x,n){
 		else{b=b+'0'}
 	};
 	return b
+},
+
+dotFun:function(A,B,fun){ // dot matrix function
+	4;
 },
 
 get:function(key,callback,url){ // get content at url or key
@@ -150,6 +167,14 @@ load:function(url){
 log:function(x,n){
 	if (!n){return Math.log(x)}
 	else{return Math.log(x)/Math.log(n)}
+},
+
+max:function(x){ //return maximum value of array
+	return x.reduce(function(a,b){if(a>b){return a}else{return b}})
+},
+
+max2:function(x){ // returns maximum value of array and its index, i.e.  [max,i]
+	return x.map(function(xi,i){return [xi,i]}).reduce(function(a,b){if(a[0]>b[0]){return a}else{return b}})
 },
 
 parse:function(x){ // x is a stringified Object
