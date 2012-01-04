@@ -32,6 +32,16 @@ cat:function(x,y){ // cat will work for matrices and objects
 	return this.parse(x.slice(0,x.length-1)+','+y.slice(1,y.length));		
 },
 
+catArray:function(A){ // optimized for conCATenation of an array of numerically indexed arrays
+	// this function was developed to adress memory issues of dealing with large arrays, not performance
+	var Astr='[',Ai='';
+	for(var i=0;i<A.length;i++){
+		Ai=JSON.stringify(A[i]);
+		Astr+=Ai.slice(1,Ai.length-1)+',';
+	}
+	return JSON.parse(Astr.slice(0,Astr.length-1)+']');
+},
+
 cEl:function(x,id){
 	x = document.createElement(x);
 	if(id){x.id=id}
@@ -89,7 +99,7 @@ get:function(key,callback,url){ // get content at url or key
 	var uid = this.uid();
 	if(!this.get.jobs){this.get.jobs=[]}
 	this.get.jobs[uid]={'fun':callback};
-	var url=url+'/webrw.php?get='+key+'&callback=jmat.get.jobs.'+uid+'.fun';
+	var url=url+'?get='+key+'&callback=jmat.get.jobs.'+uid+'.fun';
 	var s=document.createElement('script');
 	s.id = uid;s.src=url;
 	document.body.appendChild(s);
@@ -255,8 +265,8 @@ set:function(val,callback,key,url){ // set key-val pairs in the webrw endpoint, 
 	var uid = this.uid();
 	this.set.jobs[uid]={'fun':callback};
 	var s=document.createElement('script');s.id=uid;
-	if (!key){s.src=url+'/webrw.php?set='+val+'&callback=jmat.set.jobs.'+uid+'.fun'}
-	else{s.src=url+'/webrw.php?set='+val+'&key='+key+'&callback=jmat.set.jobs.'+uid+'.fun'}
+	if (!key){s.src=url+'?set='+val+'&callback=jmat.set.jobs.'+uid+'.fun'}
+	else{s.src=url+'?set='+val+'&key='+key+'&callback=jmat.set.jobs.'+uid+'.fun'}
 	document.body.appendChild(s);
 	setTimeout('document.body.removeChild(document.getElementById("'+uid+'"));delete jmat.set.jobs.'+uid+';',10000);
 	return uid;
@@ -335,6 +345,6 @@ unique:function(x){ // x is an Array
 	return u
 },
 
-webrwUrl:'http://sandbox1.mathbiol.org',
+webrwUrl:'http://sandbox1.mathbiol.org/webrw.php',
 
 }
