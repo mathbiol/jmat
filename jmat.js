@@ -91,7 +91,7 @@ dec2bin:function(x,n){
 
 disp:function(x){ // by default displays both in the console and in document.body
 	console.log(x);
-	document.body.innerHTML+='<br><span color=blue>'+x+'</span>';
+	document.body.innerHTML+='<br><span style="color:blue">'+x+'</span>';
 },
 
 dotFun:function(A,B,fun){ // dot matrix function
