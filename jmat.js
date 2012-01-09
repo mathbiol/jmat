@@ -61,6 +61,18 @@ cloneArray:function(A){
 	else{return A}
 },
 
+colormap:function(c){
+	if(!c){c='default'}
+	switch(c){
+		case 'default':
+		c=[[0,0,0.5625],[0,0,0.625],[0,0,0.6875],[0,0,0.75],[0,0,0.8125],[0,0,0.875],[0,0,0.9375],[0,0,1],[0,0.0625,1],[0,0.125,1],[0,0.1875,1],[0,0.25,1],[0,0.3125,1],[0,0.375,1],[0,0.4375,1],[0,0.5,1],[0,0.5625,1],[0,0.625,1],[0,0.6875,1],[0,0.75,1],[0,0.8125,1],[0,0.875,1],[0,0.9375,1],[0,1,1],[0.0625,1,0.9375],[0.125,1,0.875],[0.1875,1,0.8125],[0.25,1,0.75],[0.3125,1,0.6875],[0.375,1,0.625],[0.4375,1,0.5625],[0.5,1,0.5],[0.5625,1,0.4375],[0.625,1,0.375],[0.6875,1,0.3125],[0.75,1,0.25],[0.8125,1,0.1875],[0.875,1,0.125],[0.9375,1,0.0625],[1,1,0],[1,0.9375,0],[1,0.875,0],[1,0.8125,0],[1,0.75,0],[1,0.6875,0],[1,0.625,0],[1,0.5625,0],[1,0.5,0],[1,0.4375,0],[1,0.375,0],[1,0.3125,0],[1,0.25,0],[1,0.1875,0],[1,0.125,0],[1,0.0625,0],[1,0,0],[0.9375,0,0],[0.875,0,0],[0.8125,0,0],[0.75,0,0],[0.6875,0,0],[0.625,0,0],[0.5625,0,0],[0.5,0,0]];
+	  	break;
+	default:
+	  c = 'not found';
+	}
+	return c
+},
+
 data2imData:function(data){ // the reverse of im2data, data is a matlabish set of 4 2d matrices, with the r, g, b and alpha values
 	var n=data.length, m=data[0].length;
 	//var imData = {width:m, height:n, data:[]};
@@ -165,6 +177,15 @@ imData2data:function(imData){ // imData is the data structure returned by canvas
 	return data;	
 },
 
+imMap:function(im,fun){ // applies function to all pixels of an image and returns the 2D map of fun values
+	if(!fun){fun=function(xy){return 0}} // in no fun return a 2D zero matrix
+	return im.map(function(x){
+		return x.map(function(xy){
+			return fun(xy)
+		})
+	})
+},
+
 length:function(x){ // js Array.length returns highest index, not always the numerical length
 	var n=0
 	for(var i in x){n++};
@@ -216,6 +237,11 @@ max:function(x){ //return maximum value of array
 
 max2:function(x){ // returns maximum value of array and its index, i.e.  [max,i]
 	return x.map(function(xi,i){return [xi,i]}).reduce(function(a,b){if(a[0]>b[0]){return a}else{return b}})
+},
+
+not:function(x){ // negates Boolean value, or an array thereof
+	if(Array.isArray(x)){return x.map(function(xi){return jmat.not(xi)})}
+	else{return !x}
 },
 
 parse:function(x){ // x is a stringified Object
@@ -330,6 +356,13 @@ transpose:function (x){ // transposes 2D array
 		}
 	}
 	return y
+},
+
+threshold:function(im,thr){ // image segmentation by thresholding, returns binary image matrix
+	if(!im.width){var dt=im}
+	else{dt=this.imData2data(im)} // in case im is an imageData object 
+	if(!thr){thr = jmat.max(jmat.catArray(dt))/2} // default threshold is 1/10 of maximum, write something better later
+	return jmat.imMap(dt,function(xy){return (xy>thr)}); // threshold value, thr, is passed to the function through a closure
 },
 
 uid:function(prefix){
