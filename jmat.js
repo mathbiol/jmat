@@ -48,6 +48,11 @@ cEl:function(x,id){
 	return x
 },
 
+class:function(x){
+	if(!x.constructor){return null}
+	else{return x.constructor.name}
+},
+
 clone:function(x){ // clone object without functional elements
 	return JSON.parse(JSON.stringify(x))
 },
@@ -258,6 +263,84 @@ parseUrl:function(url){ // parsing url and its arguments out
 	return u
 },
 
+plot:function(ctx,x,y,s,opt){ // plot
+if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
+		switch (this.class(ctx)){
+			case "String":
+			ctx=jmat.gId(ctx).getContext('2d');
+			break;
+			case "HTMLCanvasElement":
+			// assume it is a canvas element
+			ctx=ctx.getContext('2d');
+			break;
+		}
+		
+	}
+	//default opt
+	var opt0={
+		MarkerSize:12,
+		Color:[0,0,1],
+		MarkerEdgeColor:'auto',
+		MarkerFaceColor:'none',
+		x:x,
+		y:y
+	}
+	if(!opt){opt=opt0};
+	opt = jmat.cat(opt0,opt);
+	// inherit colors
+	if (typeof(opt.MarkerEdgeColor)=='string'){
+		if(opt.MarkerEdgeColor=='auto'){opt.MarkerEdgeColor=opt.Color}
+		else{opt.MarkerEdgeColor=[0,0,0,0]}
+	}
+	if (typeof(opt.MarkerFaceColor)=='string'){
+		if(opt.MarkerFaceColor=='auto'){opt.MarkerFaceColor=opt.Color}
+		else{opt.MarkerFaceColor=[0,0,0,0]} // string is 'none'
+	}
+	if(opt.Color.length==3){opt.Color}
+	var L=opt.MarkerSize;
+	switch(s){
+		case 'o': // draw a circle
+		ctx.beginPath();
+		ctx.strokeStyle=jmat.rgba(opt.MarkerEdgeColor);
+		ctx.arc(x,y,L/2,0,2*Math.PI,true);
+		ctx.closePath();
+		ctx.stroke();
+		break;
+		case 's': // draw a square
+		ctx.beginPath();
+		ctx.strokeStyle=jmat.rgba(opt.MarkerEdgeColor);
+		ctx.strokeRect(x-L/2,y-L/2,L,L);
+		ctx.closePath();
+		ctx.stroke();
+		break;
+		case '+': // draw a +
+		ctx.beginPath();
+		ctx.strokeStyle=jmat.rgba(opt.MarkerEdgeColor);
+		ctx.moveTo(x-L/2,y);ctx.lineTo(x+L/2,y);
+		ctx.moveTo(x,y-L/2);ctx.lineTo(x,y+L/2);
+		ctx.closePath();
+		ctx.stroke();
+		break;
+		case 'x': // draw a x
+		ctx.beginPath();
+		ctx.strokeStyle=jmat.rgba(opt.MarkerEdgeColor);
+		ctx.moveTo(x-L/2,y-L/2);ctx.lineTo(x+L/2,y+L/2);
+		ctx.moveTo(x-L/2,y+L/2);ctx.lineTo(x+L/2,y-L/2);
+		ctx.closePath();
+		ctx.stroke();
+		break;
+		case '*': // draw a *
+		this.plot(ctx,x,y,'+',opt);
+		this.plot(ctx,x,y,'x',opt);
+		break;
+	}
+	// return handle structure
+	opt.x=x;
+	opt.y=y;
+	opt.radius=opt.MarkerSize;
+	return opt
+},
+
 ranksum:function(x,y){ // this is just a first approximation while something saner emerges for stats
 	var s=x.map(function(xi){return y.map(function(yi){return [yi>xi,yi<xi]}).reduce(function(a,b){return [a[0]+b[0],a[1]+b[1]]})}).reduce(function(a,b){return [a[0]+b[0],a[1]+b[1]]});
 	return Math.abs(s[0]-s[1])/(x.length*y.length);
@@ -286,6 +369,17 @@ revalSet:function(uid){ // set job for remote evaluation, task is the key of the
 
 revalGet:function(task){ //
 	4;
+},
+
+rgba:function(x){ // genertes rgba string HTML Color can understand for a 0 to 1 vector of 3 or 4 elements
+	if (x.length==3){x=jmat.cat(x,[1])} // if rgb make rgba by adding opaque alpha
+	x=x.map(function(xi){return Math.round(xi*255)});
+	return ('rgba('+x.toString()+')');
+},
+
+rgb:function(x){ // genertes rgba string HTML Color can understand for a 0 to 1 vector of 3 or 4 elements
+	x=x.map(function(xi){return Math.round(xi*255)});
+	return ('rgb('+x.slice(0,3).toString()+')');
 },
 
 set:function(val,callback,key,url){ // set key-val pairs in the webrw endpoint, calback will have the key as its argument
