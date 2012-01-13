@@ -1,6 +1,11 @@
 console.log('jmat :-)')
 
 jmat = {
+	
+abs:function(x){ // absolute value
+	if (Array.isArray(x)){return x.map(function(xi){return jmat.abs(xi)})}
+	else{return Math.abs(x)}
+},
 
 array2mat:function(x){ // to handle indexed arrays by converting them into two separate numerically indexed arrays
 	var j = 0, y1=[], y2=[];
@@ -19,6 +24,11 @@ array2str:function(x,sp){ // convert array into a sp separated
 		y=y+sp+x[i];
 	}
 	return y
+},
+
+arrayfun:function(x,fun){ // apply function to each element of an array
+	if (Array.isArray(x)){return x.map(function(xi){return jmat.arrayfun(xi,fun)})}
+	else{return fun(x)}
 },
 
 bin2dec:function(x){
@@ -191,6 +201,14 @@ imMap:function(im,fun){ // applies function to all pixels of an image and return
 	})
 },
 
+im2bw:function(im,thr){ // segments 2d matrix into 0's and 1's for values below or above a threshold
+	return jmat.imMap(im,function(xy){
+		if(xy>=thr){return 1}
+		else{return 0}
+		}
+	)
+},
+
 length:function(x){ // js Array.length returns highest index, not always the numerical length
 	var n=0
 	for(var i in x){n++};
@@ -331,6 +349,7 @@ if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
 		break;
 		case '*': // draw a *
 		this.plot(ctx,x,y,'+',opt);
+		opt.MarkerSize=L*Math.cos(Math.PI/4);
 		this.plot(ctx,x,y,'x',opt);
 		break;
 	}
