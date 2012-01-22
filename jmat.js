@@ -161,6 +161,10 @@ gId:function(x){ // x is the id of an existing DOM element
 	return document.getElementById(x)
 },
 
+im1to255:function(x){// converts {0-1} matrix into an im data matrix
+	4
+},
+
 imread:function(cv){ // reads image from context into matrix
 	// find out what type of input
 	if(typeof(cv)=='string'){ // cv is the id of a canvas element
@@ -215,12 +219,15 @@ length:function(x){ // js Array.length returns highest index, not always the num
 	return n
 },
 
-load:function(url){ // load script / JSON
+load:function(url,cb,er){ // load script / JSON
 	var s = document.createElement('script');
 	s.src=url;
 	s.id = this.uid();
+	if(cb){s.onload=cb}
+	if(er){s.onerror=er}
 	document.body.appendChild(s);
 	setTimeout('document.body.removeChild(document.getElementById("'+s.id+'"));',30000); // is the waiting still needed ?
+	return s.id
 },
 
 loadFiles:function(files,readAs,callback){
