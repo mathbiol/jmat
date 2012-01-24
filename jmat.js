@@ -408,6 +408,12 @@ rgb:function(x){ // genertes rgba string HTML Color can understand for a 0 to 1 
 	return ('rgb('+x.slice(0,3).toString()+')');
 },
 
+save:function(varValue,varName){//save variable in the localHost, for example, save('NC_007019',seq)
+	if(!varName){varName=this.uid()}
+	localStorage.setItem(varName,varValue)
+	return varName;
+},
+
 set:function(val,callback,key,url){ // set key-val pairs in the webrw endpoint, calback will have the key as its argument
 	if (!callback){callback=function(x){console.log(x)}};
 	if (typeof(val)!='string'){this.stringify(val)};
