@@ -129,7 +129,7 @@ dimFun:function(){ // first argument is the function, subsequent arguments speci
 	if(arguments.length==0){arguments=[function(){return 0}]}
 	var fun=arguments[0];
 	if(arguments.length>1){
-		if(Array.isArray(arguments[1])){var x = arguments[1]}
+		if(typeof(arguments[1])!='number'){var x = [];for(var i=0;i<arguments[1].length;i++){x[i]=arguments[1][i]}}
 		else{var x=[];for(var i=1;i<arguments.length;i++){x[i-1]=arguments[i]}} // note first argument is always fun
 		var z=[];
 		if(x.length<2){
@@ -310,6 +310,10 @@ not:function(x){ // negates Boolean value, or an array thereof
 	else{return !x}
 },
 
+ones:function(){
+	return jmat.dimFun(function(){return 1},arguments)
+},
+
 parse:function(x){ // x is a stringified Object
 	eval('var res='+x);
 	return res;
@@ -404,25 +408,7 @@ if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
 },
 
 rand:function(){
-	if(arguments.length>0){
-		if(Array.isArray(arguments[0])){var x = arguments[0]}
-		else{var x=[];for(var i=0;i<arguments.length;i++){x[i]=arguments[i]}}
-		var z=[];
-		if(x.length<2){
-			for(var i=0;i<x[0];i++){
-				z[i]=Math.random();
-			}
-		}
-		else {
-			var x0=x[0];
-			x=x.slice(1);
-			for(var i=0;i<x0;i++){
-				z[i]=jmat.rand(x);
-			}
-		}
-	}
-    else {z=Math.random()}
-	return z
+	return jmat.dimFun(function(){return Math.random()},arguments)
 },
 
 ranksum:function(x,y){ // this is just a first approximation while something saner emerges for stats
@@ -582,6 +568,10 @@ unique:function(x){ // x is an Array
 		}
 	}
 	return u
+},
+
+zeros:function(){
+	return jmat.dimFun(function(){return 0},arguments)
 },
 
 webrwUrl:'http://sandbox1.mathbiol.org/webrw.php',
