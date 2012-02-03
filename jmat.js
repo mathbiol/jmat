@@ -125,6 +125,30 @@ dotFun:function(A,B,fun){ // dot matrix function
 	4;
 },
 
+dimFun:function(){ // first argument is the function, subsequent arguments specify dimensions
+	if(arguments.length==0){arguments=[function(){return 0}]}
+	var fun=arguments[0];
+	if(arguments.length>1){
+		if(Array.isArray(arguments[1])){var x = arguments[1]}
+		else{var x=[];for(var i=1;i<arguments.length;i++){x[i-1]=arguments[i]}} // note first argument is always fun
+		var z=[];
+		if(x.length<2){
+			for(var i=0;i<x[0];i++){
+				z[i]=fun(i); // fun has access to array index
+			}
+		}
+		else {
+			var x0=x[0];
+			x=x.slice(1);
+			for(var i=0;i<x0;i++){
+				z[i]=jmat.dimFun(fun,x);
+			}
+		}
+	}
+    else {z=fun()}
+	return z
+},
+
 get:function(key,callback,url){ // get content at url or key
 	if (!callback){callback=function(x){console.log(x)}}
 	if (!url){url=this.webrwUrl};
@@ -182,6 +206,11 @@ imwrite:function(cv,im,dx,dy){
 	var ct = cv.getContext('2d');
 	ct.putImageData(im,dx,dy);
 	return ct;
+},
+
+imagesc:function(cv,dt,cm){ // scales values to use full range of values. cv is the canvas, dt the data, and cm the colormap
+	if(!cm){cm=jmat.colormap()}
+	cm = jmat.transpose(); // to get one vector per channel
 },
 
 imData2data:function(imData){ // imData is the data structure returned by canvas.getContext('2d').getImageData(0,0,n,m)
@@ -267,6 +296,13 @@ max:function(x){ //return maximum value of array
 
 max2:function(x){ // returns maximum value of array and its index, i.e.  [max,i]
 	return x.map(function(xi,i){return [xi,i]}).reduce(function(a,b){if(a[0]>b[0]){return a}else{return b}})
+},
+
+memb:function(x,dst){ // builds membership function
+	if(!dst){
+		
+	}
+	
 },
 
 not:function(x){ // negates Boolean value, or an array thereof
@@ -365,6 +401,28 @@ if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
 	opt.y=y;
 	opt.radius=opt.MarkerSize;
 	return opt
+},
+
+rand:function(){
+	if(arguments.length>0){
+		if(Array.isArray(arguments[0])){var x = arguments[0]}
+		else{var x=[];for(var i=0;i<arguments.length;i++){x[i]=arguments[i]}}
+		var z=[];
+		if(x.length<2){
+			for(var i=0;i<x[0];i++){
+				z[i]=Math.random();
+			}
+		}
+		else {
+			var x0=x[0];
+			x=x.slice(1);
+			for(var i=0;i<x0;i++){
+				z[i]=jmat.rand(x);
+			}
+		}
+	}
+    else {z=Math.random()}
+	return z
 },
 
 ranksum:function(x,y){ // this is just a first approximation while something saner emerges for stats
@@ -471,6 +529,23 @@ switch (y){
 	default:
 	}
 return y;
+},
+
+textread:function(url,cb){
+	console.log('reading '+url+' ...');
+	if(!cb){cb=function(x){console.log(x)}}
+	var xhr = new XMLHttpRequest();
+	xhr.open("GET", url);
+	xhr.onload = function () {
+	    if (xhr.status === 200) {
+			console.log('... done.');
+	        cb(xhr.responseText);
+	    } else {
+	        console.error(xhr.status);
+	    }
+	};
+	xhr.send(null);
+	return xhr;
 },
 
 transpose:function (x){ // transposes 2D array
