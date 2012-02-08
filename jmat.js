@@ -26,9 +26,9 @@ array2str:function(x,sp){ // convert array into a sp separated
 	return y
 },
 
-arrayfun:function(x,fun){ // apply function to each element of an array
-	if (Array.isArray(x)){return x.map(function(xi){return jmat.arrayfun(xi,fun)})}
-	else{return fun(x)}
+arrayfun:function(x,fun,i){ // apply function to each element of an array
+	if (Array.isArray(x)){return x.map(function(xi,i){return jmat.arrayfun(xi,fun,i)})}
+	else{return fun(x,i)}
 },
 
 bin2dec:function(x){
@@ -125,7 +125,7 @@ dotFun:function(A,B,fun){ // dot matrix function
 	4;
 },
 
-dimFun:function(){ // first argument is the function, subsequent arguments specify dimensions
+dimfun:function(){ // first argument is the function, subsequent arguments specify dimensions
 	if(arguments.length==0){arguments=[function(){return 0}]}
 	var fun=arguments[0];
 	if(arguments.length>1){
@@ -141,7 +141,7 @@ dimFun:function(){ // first argument is the function, subsequent arguments speci
 			var x0=x[0];
 			x=x.slice(1);
 			for(var i=0;i<x0;i++){
-				z[i]=jmat.dimFun(fun,x);
+				z[i]=jmat.dimfun(fun,x);
 			}
 		}
 	}
@@ -208,9 +208,17 @@ imwrite:function(cv,im,dx,dy){
 	return ct;
 },
 
-imagesc:function(cv,dt,cm){ // scales values to use full range of values. cv is the canvas, dt the data, and cm the colormap
+imagesc:function(cv,dt,cm,fun){ // scales values to use full range of values. cv is the canvas, dt the data, and cm the colormap
 	if(!cm){cm=jmat.colormap()}
-	cm = jmat.transpose(); // to get one vector per channel
+	if(!fun){fun=function(){return 1}}; // opaque function
+	cm = jmat.transpose(cm); // to get one vector per channel
+	var n = cm[0].length-1; // should be 64-1=63
+	var I = jmat.dimfun(function(i){return i/(n)},n+1); // 64 numbers evenly spaced between 0 and 1
+	var M = jmat.max(jmat.max(dt));
+	dt = jmat.arrayfun(dt,function(x){return [jmat.interp1(I,cm[0],[x/M])[0],jmat.interp1(I,cm[1],[x/M])[0],jmat.interp1(I,cm[2],[x/M])[0],fun(x)]});
+	dt = jmat.arrayfun(dt,function(x){return Math.round(255*x)});
+	if(!!cv){jmat.imwrite(cv,dt)};
+	return dt
 },
 
 imData2data:function(imData){ // imData is the data structure returned by canvas.getContext('2d').getImageData(0,0,n,m)
@@ -240,6 +248,21 @@ im2bw:function(im,thr){ // segments 2d matrix into 0's and 1's for values below 
 		else{return 0}
 		}
 	)
+},
+
+interp1:function(X,Y,XI){ // linear interpolation, remember X is supposed to be sorted
+	var n = X.length;
+	var YI = XI.map(function(XIi){
+		var i=jmat.sum(X.map(function(Xi){if (Xi<XIi){return 1}else{return 0}}));
+		if (i==0){return Y[0]} // lower bound
+		else if (i==n){return Y[n-1]} // upper bound
+		else{return (Y[i-1]+(XIi-X[i-1])*(Y[i]-Y[i-1])/(X[i]-X[i-1]))}
+	});
+	return YI
+},
+
+ind:function(X,I){ // return vector of values reordered by vector of indexes
+	return I.map(function(i){return X[i]});
 },
 
 length:function(x){ // js Array.length returns highest index, not always the numerical length
@@ -299,8 +322,17 @@ max2:function(x){ // returns maximum value of array and its index, i.e.  [max,i]
 },
 
 memb:function(x,dst){ // builds membership function
+	var n = x.length-1;
 	if(!dst){
-		
+		dst = this.sort(x);
+		Ind=dst[1];
+		dst[1]=dst[1].map(function(z,i){return i/(n)});
+		var y = x.map(function(z,i){return dst[1][Ind[i]]});
+		return dst;
+	}
+	else{ // interpolate y from distributions, dst
+		var y = this.interp1(dst[0],dst[1],x);
+		return y;
 	}
 	
 },
@@ -311,7 +343,7 @@ not:function(x){ // negates Boolean value, or an array thereof
 },
 
 ones:function(){
-	return jmat.dimFun(function(){return 1},arguments)
+	return jmat.dimfun(function(){return 1},arguments)
 },
 
 parse:function(x){ // x is a stringified Object
@@ -408,7 +440,7 @@ if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
 },
 
 rand:function(){
-	return jmat.dimFun(function(){return Math.random()},arguments)
+	return jmat.dimfun(function(){return Math.random()},arguments)
 },
 
 ranksum:function(x,y){ // this is just a first approximation while something saner emerges for stats
@@ -571,9 +603,9 @@ unique:function(x){ // x is an Array
 },
 
 zeros:function(){
-	return jmat.dimFun(function(){return 0},arguments)
+	return jmat.dimfun(function(){return 0},arguments)
 },
 
-webrwUrl:'http://sandbox1.mathbiol.org/webrw.php',
+webrwUrl:'http://webrw.no.de',
 
 }
