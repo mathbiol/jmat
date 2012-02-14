@@ -76,6 +76,12 @@ cloneArray:function(A){
 	else{return A}
 },
 
+colon:function(x){// equivalent to x(:)
+	var y=[]; // to have it in the scope
+	jmat.arrayfun(x,function(x){y[y.length]=x});
+	return y;
+},
+
 colormap:function(c){
 	if(!c){c='default'}
 	switch(c){
@@ -149,6 +155,19 @@ dimfun:function(){ // first argument is the function, subsequent arguments speci
 	return z
 },
 
+edge:function(M){//find edge in bidimensional binary matrix such as what is produced by im2bw
+	var n = M.length, m = M[0].length;
+	var E=M.map(function(x,i){return x.map(function(y,j){
+		if((i>0)&&(i<n-1)&&(j>0)&&(j<m-1)&&(y==1)){
+			var s = M[i-1][j]+M[i-1][j+1]+M[i][j+1]+M[i+1][j+1]+M[i+1][j]+M[i+1][j-1]+M[i][j-1]+M[i-1][j-1];
+			if(s<8){return 1} // this is an edge
+			else{return 0}
+		}
+		else {return 0}
+	})});
+	return E
+},
+
 get:function(key,callback,url){ // get content at url or key
 	if (!callback){callback=function(x){console.log(x)}}
 	if (!url){url=this.webrwUrl};
@@ -208,6 +227,10 @@ imwrite:function(cv,im,dx,dy){
 	return ct;
 },
 
+image:function(cv,im,dx,dy){ // for consistency
+	return this.imwrite(cv,im,dx,dy);
+}, 
+
 imagesc:function(cv,dt,cm,fun){ // scales values to use full range of values. cv is the canvas, dt the data, and cm the colormap
 	if(!cm){cm=jmat.colormap()}
 	if(!fun){fun=function(){return 1}}; // opaque function
@@ -219,6 +242,14 @@ imagesc:function(cv,dt,cm,fun){ // scales values to use full range of values. cv
 	dt = jmat.arrayfun(dt,function(x){return Math.round(255*x)});
 	if(!!cv){jmat.imwrite(cv,dt)};
 	return dt
+},
+
+imagebw:function(cv,dt,C0,C1){ // imagesc for binary matrices
+	if(!C0){C0=[0,0,0,0]}
+	if(!C1){C1=[255,255,255,255]}
+	var dt01 = jmat.arrayfun(dt,function(x){if(x==1){return C1}else{return C0}})
+	if(!!cv){jmat.imwrite(cv,dt01)};
+	return dt01;
 },
 
 imData2data:function(imData){ // imData is the data structure returned by canvas.getContext('2d').getImageData(0,0,n,m)
@@ -263,6 +294,15 @@ interp1:function(X,Y,XI){ // linear interpolation, remember X is supposed to be 
 
 ind:function(X,I){ // return vector of values reordered by vector of indexes
 	return I.map(function(i){return X[i]});
+},
+
+innerfun:function(x,y,fun){ // inner operations between two arrays
+	if(Array.isArray(x)){
+		return x.map(function(xi,i){return jmat.innerfun(xi,y[i],fun)});
+	}
+	else{
+		return fun(x,y)
+	}
 },
 
 length:function(x){ // js Array.length returns highest index, not always the numerical length
@@ -319,6 +359,14 @@ max:function(x){ //return maximum value of array
 
 max2:function(x){ // returns maximum value of array and its index, i.e.  [max,i]
 	return x.map(function(xi,i){return [xi,i]}).reduce(function(a,b){if(a[0]>b[0]){return a}else{return b}})
+},
+
+min:function(x){ //return maximum value of array
+	return x.reduce(function(a,b){if(a<b){return a}else{return b}})
+},
+
+min2:function(x){ // returns maximum value of array and its index, i.e.  [max,i]
+	return x.map(function(xi,i){return [xi,i]}).reduce(function(a,b){if(a[0]<b[0]){return a}else{return b}})
 },
 
 memb:function(x,dst){ // builds membership function
@@ -503,6 +551,15 @@ set:function(val,callback,key,url){ // set key-val pairs in the webrw endpoint, 
 	document.body.appendChild(s);
 	setTimeout('document.body.removeChild(document.getElementById("'+uid+'"));delete jmat.set.jobs.'+uid+';',10000);
 	return uid;
+},
+
+size:function(x){
+	var L=function(y){
+		s[s.length]=y.length;
+		if(Array.isArray(y[0])){L(y[0])}
+	}
+	var s=[];L(x);
+	return s;
 },
 
 sort:function(x){ // [y,I]=sort(x), where y is the sorted array and I contains the indexes
