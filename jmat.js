@@ -218,6 +218,29 @@ imread:function(cv){ // reads image from context into matrix
 	return this.imData2data(imData)
 },
 
+imhalve:function(dt0,PSmax){ // poor man's version of imresize, it halves an image size by averaging two rows/columns
+	var s = jmat.size(dt0);
+	if(!PSmax){PSmax = jmat.prod(s.slice(0,2))-1} // if maximum size not defined then just have it once
+	if(jmat.prod(s.slice(0,2))>PSmax){
+		if(jmat.length(s)!==3){throw('this should be an image value matrix, size n x m x 4')}
+		if(s[2]!==4){throw('this should be an image value matrix, size n x m x 4')}
+		s = jmat.arrayfun(s,function(x){return Math.floor(x/2)}); // half size, with floored integers
+		s[2]=4; // rgba
+		var dt = jmat.zeros(s[0],s[1],s[2]);
+		dt=dt.map(function(x,i){
+			return x.map(function(y,j){
+				return y.map(function(z,k){
+					return (dt0[i*2][j*2][k]+dt0[i*2+1][j*2+1][k]+dt0[i*2][j*2+1][k])/3;
+				})
+			})
+		});
+	}
+	else{var dt = dt0};
+	// if maximum pixel size was set and was exceeded keep halving
+	if(jmat.prod(jmat.size(dt).slice(0,2))>PSmax){dt = jmat.imhalve(dt,PSmax)} 
+	return dt	
+},
+
 imwrite:function(cv,im,dx,dy){
 	if(!dy){dx=0;dy=0} // default location
 	if(typeof(cv)=='string'){cv=jmat.gId(cv)} //cv can also be the id of a canvas element
@@ -487,6 +510,8 @@ if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
 	return opt
 },
 
+prod:function(x){return x.reduce(function(a,b){return a*b})},
+
 rand:function(){
 	return jmat.dimfun(function(){return Math.random()},arguments)
 },
@@ -499,6 +524,7 @@ ranksum:function(x,y){ // this is just a first approximation while something san
 reval:function(x,fun,callback,url){ 
 	if (!Array.isArray(x)){x=[x]} // make sure x is an array
 	if (!Array.isArray(fun)){fun=[fun]} // make sure it is an array of functions
+	if (!callback){callback=function(x){console.log(x)}}
 	if (!url){url=this.webrwUrl};
 	//if (!Array.isArray(fun)){fun=[fun]} // make sure it is an array of functions
 	// create webrw jobList
@@ -510,6 +536,7 @@ reval:function(x,fun,callback,url){
 	for (var i=jmat.reval.jobs[uid].x.length;i<n;i++){jmat.reval.jobs[uid].x[i]=jmat.reval.jobs[uid].x[i-1]}
 	for (var i=jmat.reval.jobs[uid].fun.length;i<n;i++){jmat.reval.jobs[uid].fun[i]=jmat.reval.jobs[uid].fun[i-1]}
 	this.set('if(!window.jmatReval){jmatReval=[]};jmatReval["'+uid+'"]={ jobs:'+jmat.stringify(jmat.reval.jobs[uid])+'};',this.parse('function(key){jmat.reval.jobs.'+uid+'.key=key;jmat.revalSet("'+uid+'");}'),undefined,url);
+	return uid
 },
 
 revalSet:function(uid){ // set job for remote evaluation, task is the key of the webrw document aggregating individual jobs
