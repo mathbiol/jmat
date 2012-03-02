@@ -345,6 +345,12 @@ load:function(url,cb,er){ // load script / JSON
 	return s.id
 },
 
+loadScripts:function(urls,cb,er){ // loading multiple scripts sequentially, runn callback after the last one is loaded
+	console.log('loading script '+urls[0]+' ...');
+	if (urls.length>1){jmat.load(urls[0],function(){jmat.loadScripts(urls.slice(1))})} // recursion
+	else {jmat.load(urls[0],cb,er)}
+},
+
 loadFiles:function(files,readAs,callback){
 	//<input type="file" id="files" multiple onchange="jmat.loadFiles(this.files,'readAsText')"></input> //<-- example of button for reading text files
 	if(!readAs){readAs='readAsDataURL'} // default is to read as dataURL
@@ -595,7 +601,10 @@ sort:function(x){ // [y,I]=sort(x), where y is the sorted array and I contains t
 	return this.transpose(x)
 },
 
-sum:function(x){return x.reduce(function(a,b){return a+b})},
+sum:function(x){
+	if(Array.isArray(x[0])){return x.map(function(xi){return jmat.sum(xi)})}
+	else{return x.reduce(function(a,b){return a+b})};
+},
 
 str2num:function(x){
 	return JSON.parse(x);
