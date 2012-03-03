@@ -168,6 +168,30 @@ edge:function(M){//find edge in bidimensional binary matrix such as what is prod
 	return E
 },
 
+extractSegs:function(bw){ // extracts segmented features from a [0,1] matrix and retruns them as an Array
+	if(typeof(segFeatures)=='undefined'){var segFeatures=[]} // collect extracted features here
+	var m = jmat.max2(bw);
+	var n = jmat.size(bw);
+	while(m[0]>0){ // extract this feature
+		var C=[1,0,0]; // always use yellow
+		//jmat.plot(cvTop,m[1][1],m[1][0],'s',{Color:[1,1,0],MarkerSize:30});
+		var extractSeg = function(x,y,S){ // bw is passed in the scope of extractSegs
+			if(typeof(S)=='undefined'){var S=[]} // collect feature's positions
+			S[S.length]=[x,y];bw[x][y]=0;
+			// check which neighbors are >0 and take them out too
+			var xi,yi;
+			if(x>0){xi=x-1;yi=y;if(bw[xi][yi]>0){S=extractSeg(xi,yi,S)}}
+			if(x<n[0]-1){xi=x+1;yi=y;if(bw[xi][yi]>0){S=extractSeg(xi,yi,S)}}
+			if(y>0){xi=x;yi=y-1;if(bw[xi][yi]>0){S=extractSeg(xi,yi,S)}}
+			if(y<n[1]-1){xi=x;yi=y+1;if(bw[xi][yi]>0){S=extractSeg(xi,yi,S)}}
+			return S;
+		}
+		segFeatures[segFeatures.length]=extractSeg(m[1][0],m[1][1]);//extraction starts with coordiantes ofmaximum value
+		m = jmat.max2(bw);
+	}
+	return segFeatures.map(function(si){return jmat.transpose(si)})
+},
+
 get:function(key,callback,url){ // get content at url or key
 	if (!callback){callback=function(x){console.log(x)}}
 	if (!url){url=this.webrwUrl};
@@ -383,11 +407,19 @@ log:function(x,n){
 },
 
 max:function(x){ //return maximum value of array
-	return x.reduce(function(a,b){if(a>b){return a}else{return b}})
+	if(Array.isArray(x[0])){return x.map(function(xi){return jmat.max(xi)})}
+	else{return x.reduce(function(a,b){if(a>b){return a}else{return b}})};
+	//return x.reduce(function(a,b){if(a>b){return a}else{return b}})
 },
 
 max2:function(x){ // returns maximum value of array and its index, i.e.  [max,i]
-	return x.map(function(xi,i){return [xi,i]}).reduce(function(a,b){if(a[0]>b[0]){return a}else{return b}})
+	if(Array.isArray(x[0])){ // coded only up to 2 dimensions
+		var xx = jmat.transpose(x.map(function(xi){return jmat.max2(xi)}))
+		var y = jmat.max2(xx[0]);
+		return [y[0],[y[1],xx[1][y[1]]]];
+	}
+	else{return x.map(function(xi,i){return [xi,i]}).reduce(function(a,b){if(a[0]>b[0]){return a}else{return b}})};
+	//return x.map(function(xi,i){return [xi,i]}).reduce(function(a,b){if(a[0]>b[0]){return a}else{return b}})
 },
 
 min:function(x){ //return maximum value of array
