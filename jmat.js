@@ -618,6 +618,14 @@ set:function(val,callback,key,url){ // set key-val pairs in the webrw endpoint, 
 	return uid;
 },
 
+shorten:function(x,n){ // shortens numbers or strings
+	if (Array.isArray(x)){return x.map(function(xi){return jmat.shorten(xi,n)})}
+	else {
+		if(typeof(x)=='number'){x +=''}
+		return x.slice(0,n);
+	}
+},
+
 size:function(x){
 	var L=function(y){
 		s[s.length]=y.length;
