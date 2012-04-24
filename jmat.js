@@ -166,6 +166,26 @@ colormap:function(c){
 	return c
 },
 
+d3:{
+	figure:function(id,type){ // create figure by appending d3's svg element to DOM element with specified id
+		if (typeof(id)==='undefined'){
+			var fig = d3.select("body").append("div");
+			fig.id = jmat.uid('fig');
+		}
+		else{
+			if(jmat.gId(id)!=null){var fig = d3.select('#'+id);} // if it exists
+			else {var fig = this.figure();fig[0][0].id = id} // otherwise create it
+		}	
+		
+		if (typeof(type)==='string'){
+			fig.attr('class',type); // possibilities: "chart", 
+		}
+		this.gcf=fig;
+		return fig;		
+	},
+	
+},
+
 data2imData:function(data){ // the reverse of im2data, data is a matlabish set of 4 2d matrices, with the r, g, b and alpha values
 	var n=data.length, m=data[0].length;
 	//var imData = {width:m, height:n, data:[]};
@@ -264,6 +284,28 @@ extractSegs:function(bw){ // extracts segmented features from a [0,1] matrix and
 	return segFeatures.map(function(si){return jmat.transpose(si)})
 },
 
+fieldnames:function(x){
+	y=[];i=0;
+	for(var f in x){
+		y[i]=f;
+		i++;
+	}
+	return y;
+},
+
+find:function(x,patt,modifier){ // find wich elements of an array match a pattern
+	if(!modifier){modifier='gi'}// default is global and case insensitive
+	var y = [];
+	if(Array.isArray(patt)){patt='('+patt.join(')|(')+')'} // allows multiple patterns
+	patt = new RegExp(patt,modifier);
+	var M
+	for(var i in x){
+		M=x[i].match(patt);
+		if(!!M){y.push(i)}
+	}
+	return y
+},
+
 get:function(key,callback,url){ // get content at url or key
 	if (!callback){callback=function(x){console.log(x)}}
 	if (!url){url=this.webrwUrl};
@@ -276,15 +318,6 @@ get:function(key,callback,url){ // get content at url or key
 	document.body.appendChild(s);
 	setTimeout('document.body.removeChild(document.getElementById("'+uid+'"));delete jmat.get.jobs.'+uid+';',10000); // is the waiting still need ? script onload would be another possibility to delete it
 	return uid;
-},
-
-fieldnames:function(x){
-	y=[];i=0;
-	for(var f in x){
-		y[i]=f;
-		i++;
-	}
-	return y;
 },
 
 gId:function(x){ // x is the id of an existing DOM element
@@ -350,13 +383,14 @@ image:function(cv,im,dx,dy){ // for consistency
 	return this.imwrite(cv,im,dx,dy);
 }, 
 
-imagesc:function(cv,dt,cm,fun){ // scales values to use full range of values. cv is the canvas, dt the data, and cm the colormap
+imagesc:function(cv,dt,cm,fun,M){ // scales values to use full range of values. cv is the canvas, dt the data, and cm the colormap
 	if(!cm){cm=jmat.colormap()}
 	if(!fun){fun=function(){return 1}}; // opaque function
 	cm = jmat.transpose(cm); // to get one vector per channel
 	var n = cm[0].length-1; // should be 64-1=63
 	var I = jmat.dimfun(function(i){return i/(n)},n+1); // 64 numbers evenly spaced between 0 and 1
-	var M = jmat.max(jmat.max(dt));
+	if(!M){M = jmat.max(jmat.max(dt))};
+	if(typeof(fun)=='string'){eval('fun='+fun)} // allow eval fun with transparencies
 	dt = jmat.arrayfun(dt,function(x){return [jmat.interp1(I,cm[0],[x/M])[0],jmat.interp1(I,cm[1],[x/M])[0],jmat.interp1(I,cm[2],[x/M])[0],fun(x)]});
 	dt = jmat.arrayfun(dt,function(x){return Math.round(255*x)});
 	if(!!cv){jmat.imwrite(cv,dt)};
@@ -434,10 +468,10 @@ load:function(url,cb,er){ // load script / JSON
 	var s = document.createElement('script');
 	s.src=url;
 	s.id = this.uid();
-	if(cb){s.onload=cb}
-	if(er){s.onerror=er}
+	if(!!cb){s.onload=cb}
+	if(!!er){s.onerror=er}
 	document.body.appendChild(s);
-	setTimeout('document.body.removeChild(document.getElementById("'+s.id+'"));',30000); // is the waiting still needed ?
+	setTimeout('document.body.removeChild(document.getElementById("'+s.id+'"));',3000); // is the waiting still needed ?
 	return s.id
 },
 
@@ -473,9 +507,46 @@ readFile:function(f,readAs,callback){
 	reader[readAs](f);
 },
 
+loadD3:function(callback){ // loads d3.js library
+	//jmat.load('http://mbostock.github.com/d3/d3.v2.js',callback);
+	jmat.load('d3.v2.min.js',callback);
+},
+
 log:function(x,n){
 	if (!n){return Math.log(x)}
 	else{return Math.log(x)/Math.log(n)}
+},
+
+lookUp:function(tbl,col_in,val_in,col_out){// lookup in table tbl, 
+	// for value in column col_out where the column col_in has the value val_in
+	var val_out={};// return results as a table
+	// Find Columns
+	var col_in_i=this.find(tbl.cols,col_in);
+	if(col_in_i.length==0){throw('input column not found')}
+	// if output columns not specified use the same as the input cols
+	if(!col_out){col_out=col_in;var col_out_i=col_in_i}
+	else{var col_out_i=this.find(tbl.cols,col_out)}
+	// Find which rows have those values
+	var rows = jmat.transpose(tbl.rows) , r=[] , Ind=[];
+	for(var c in col_in_i){
+		r=jmat.find(rows[col_in_i[c]],val_in);
+		if(r.length>0){for (var i in r){Ind.push(r[i])}}
+	}
+	Ind = jmat.unique(Ind);
+	val_out.cols=col_out_i.map(function(i){return tbl.cols[i]});
+	val_out.rows=jmat.zeros(col_out_i.length,Ind.length);
+	for(var i=0;i<val_out.cols.length;i++){
+		for(var j=0;j<Ind.length;j++){
+			val_out.rows[i][j]=rows[col_out_i[i]][Ind[j]]
+		}
+	}
+	return val_out;
+	
+	//return Ind
+	//var val_in_i=[];
+	//for(var i in tbl.rows){
+	//	if(cols[i]==col){col_in_i=i}
+	//}
 },
 
 max:function(x){ //return maximum value of array
