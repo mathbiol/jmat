@@ -517,7 +517,7 @@ log:function(x,n){
 	else{return Math.log(x)/Math.log(n)}
 },
 
-lookUp:function(tbl,col_in,val_in,col_out){// lookup in table tbl, 
+lookup:function(tbl,col_in,val_in,col_out){// lookup in table tbl, 
 	// for value in column col_out where the column col_in has the value val_in
 	var val_out={};// return results as a table
 	// Find Columns
@@ -527,14 +527,14 @@ lookUp:function(tbl,col_in,val_in,col_out){// lookup in table tbl,
 	if(!col_out){col_out=col_in;var col_out_i=col_in_i}
 	else{var col_out_i=this.find(tbl.cols,col_out)}
 	// Find which rows have those values
-	var rows = jmat.transpose(tbl.rows) , r=[] , Ind=[];
+	var rows = this.transpose(tbl.rows) , r=[] , Ind=[];
 	for(var c in col_in_i){
-		r=jmat.find(rows[col_in_i[c]],val_in);
+		r=this.find(rows[col_in_i[c]],val_in);
 		if(r.length>0){for (var i in r){Ind.push(r[i])}}
 	}
-	Ind = jmat.unique(Ind);
+	Ind = this.unique(Ind);
 	val_out.cols=col_out_i.map(function(i){return tbl.cols[i]});
-	val_out.rows=jmat.zeros(col_out_i.length,Ind.length);
+	val_out.rows=this.zeros(col_out_i.length,Ind.length);
 	for(var i=0;i<val_out.cols.length;i++){
 		for(var j=0;j<Ind.length;j++){
 			val_out.rows[i][j]=rows[col_out_i[i]][Ind[j]]
