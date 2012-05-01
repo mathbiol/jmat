@@ -1,0 +1,13 @@
+{
+  "name": "jMat",
+  "description": "m-code for the js console",
+  "version": "0.0.0.3",
+  "icons": {
+    "128": "icon128.png"
+  },
+  "app": {
+    "launch": {
+      "web_url": "http://jmat.googlecode.com/git/jmat.html"
+    }
+  }
+}
