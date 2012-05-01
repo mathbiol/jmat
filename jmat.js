@@ -284,6 +284,89 @@ extractSegs:function(bw){ // extracts segmented features from a [0,1] matrix and
 	return segFeatures.map(function(si){return jmat.transpose(si)})
 },
 
+    extractSegs2: function (bw) {
+     // This function was written by Sean Wilkinson as a variation on a theme
+     // of segmentation extraction from binary matrices. It returns a matrix
+     // whose elements' entries represent membership in a numbered partition.
+     // I have actually enclosed my entire "count_nuclei.js" here as a single
+     // function to be optimized and rewritten at some point in the future to
+     // take advantage of functionality that 'jmat' already provides :-)
+        var col, cols, isSpecial, neighborhood, partition, row, rows,
+            traced_image;
+        cols = bw[0].length;
+        isSpecial = function (pixel) {
+         // This function needs documentation.
+            return (pixel === 1);
+        };
+        neighborhood = function (row, col) {
+         // This function needs documentation.
+            var ball, flag, i, temp;
+            ball = [];
+            temp = [
+                [row + 1,   col + 0],   //- North
+                [row + 1,   col + 1],   //- North-East
+                [row + 0,   col + 1],   //- East
+                [row - 1,   col + 1],   //- South-East
+                [row - 1,   col + 0],   //- South
+                [row - 1,   col - 1],   //- South-West
+                [row + 0,   col - 1],   //- West
+                [row + 1,   col - 1]    //- North-West
+            ];
+            for (i = 0; i < 8; i += 1) {
+                flag = ((0 <= temp[i][0])   &&
+                        (temp[i][0] < rows) &&
+                        (0 <= temp[i][1])   &&
+                        (temp[i][1] < cols));
+                if (flag === true) {
+                    ball.push(temp[i]);
+                }
+            }
+            ball.push(ball[0]);
+            return ball;
+        };
+        partition = 0;
+        rows = bw.length;
+     // First, preallocate a two-dimensional array with null values ...
+        traced_image = new Array(rows);
+        for (row = 0; row < rows; row += 1) {
+            traced_image[row] = new Array(cols);
+            for (col = 0; col < cols; col += 1) {
+                traced_image[row][col] = null;
+            }
+        }
+     // Then, start hunting for "black" pixels ...
+        for (row = 0; row < rows; row += 1) {
+            for (col = 0; col < cols; col += 1) {
+                if (traced_image[row][col] === null) {
+                    if (isSpecial(bw[row][col])) {
+                        partition += 1;
+                        traced_image[row][col] = partition;
+                        (function cover(ball) {
+                         // This function needs documentation.
+                            var col, i, row;
+                            for (i = 0; i < ball.length; i += 1) {
+                                row = ball[i][0];
+                                col = ball[i][1];
+                                if (traced_image[row][col] === null) {
+                                    if (isSpecial(bw[row][col])) {
+                                        traced_image[row][col] = partition;
+                                        cover(neighborhood(row, col));
+                                    } else {
+                                        traced_image[row][col] = 0;
+                                    }
+                                }
+                            }
+                            return;
+                        }(neighborhood(row, col)));
+                    } else {
+                        traced_image[row][col] = 0;
+                    }
+                }
+            }
+        }
+        return traced_image;
+    },
+
 fieldnames:function(x){
 	y=[];i=0;
 	for(var f in x){
