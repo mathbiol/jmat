@@ -260,6 +260,11 @@ edge:function(M){//find edge in bidimensional binary matrix such as what is prod
 	return E
 },
 
+exist:function(x){ // does it exist? note x is the variable name, not the variable itself
+	if(eval('typeof('+x+')')=='undefined'){return false}
+	else{return true}
+},
+
 extractSegs:function(bw){ // extracts segmented features from a [0,1] matrix and retruns them as an Array
 	if(typeof(segFeatures)=='undefined'){var segFeatures=[]} // collect extracted features here
 	var m = jmat.max2(bw);
@@ -537,7 +542,7 @@ lookup:function(tbl,col_in,val_in,col_out){// lookup in table tbl,
 	val_out.rows=this.zeros(col_out_i.length,Ind.length);
 	for(var i=0;i<val_out.cols.length;i++){
 		for(var j=0;j<Ind.length;j++){
-			val_out.rows[i][j]=rows[col_out_i[i]][Ind[j]]
+			val_out.rows[j][i]=rows[col_out_i[i]][Ind[j]]
 		}
 	}
 	return val_out;
