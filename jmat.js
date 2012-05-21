@@ -542,7 +542,7 @@ lookup:function(tbl,col_in,val_in,col_out){// lookup in table tbl,
 	val_out.rows=this.zeros(col_out_i.length,Ind.length);
 	for(var i=0;i<val_out.cols.length;i++){
 		for(var j=0;j<Ind.length;j++){
-			val_out.rows[j][i]=rows[col_out_i[i]][Ind[j]]
+			val_out.rows[i][j]=rows[col_out_i[i]][Ind[j]]
 		}
 	}
 	return val_out;
