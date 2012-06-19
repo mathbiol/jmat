@@ -311,6 +311,40 @@ find:function(x,patt,modifier){ // find wich elements of an array match a patter
 	return y
 },
 
+fminsearch:function(fun,Parm0,x,y,objFun,Opt){// fun = function(x,Parm)
+	// default Objective function is the sum of squared deviations
+	if(!objFun){objFun=function(y,yp){return jmat.sum(y.map(function(yi,i){return Math.pow((yi-yp[i]),2)}))}}
+	if(!Opt){Opt={ // Default Options
+			maxIter:100, // maximum number of iterations
+			step:Parm0.map(function(p){return p/100}) // initial step is 1/100 of initial value (remember not to use zero in Parm0)
+		}
+	}
+	var ya,y0,yb,fP0,fP1;
+	var P0=jmat.clone(Parm0),P1=jmat.clone(Parm0);
+	var n = P0.length;
+	var step=Opt.step;
+	var funParm=function(P){return objFun(y,fun(x,P))}//function (of Parameters) to minimize
+	// silly multi-univariate screening
+	for(var i=0;i<Opt.maxIter;i++){
+		for(var j=0;j<n;j++){ // take a step for each parameter
+			P1=jmat.clone(P0);
+			P1[j]+=step[j];
+			if(funParm(P1)<funParm(P0)){ // parm value going in the righ direction
+				step[j]=1.2*step[j]; // go a little faster
+				P0=jmat.clone(P1);
+			}
+			else{
+				step[j]=-(0.5*step[j]); // reverse and go slower
+			}
+			console.log(i,funParm(P0),P0);
+			//console.log(j,P0);
+			//console.log(step);
+		}
+	}
+	return P0
+},
+
+
 get:function(key,callback,url){ // get content at url or key
 	if (!callback){callback=function(x){console.log(x)}}
 	if (!url){url=this.webrwUrl};
