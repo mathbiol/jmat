@@ -313,12 +313,20 @@ find:function(x,patt,modifier){ // find wich elements of an array match a patter
 
 fminsearch:function(fun,Parm0,x,y,objFun,Opt){// fun = function(x,Parm)
 	// default Objective function is the sum of squared deviations
+	// example
+	// x = [32,37,42,47,52,57,62,67,72,77,82,87,92]
+	// y=[749,1525,1947,2201,2380,2537,2671,2758,2803,2943,3007,2979,2992]
+	// fun = function(x,P){return x.map(function(xi){return (P[0]+P[1]*(1-Math.exp(-P[2]*(xi-P[3]))))})}
+	// jmat.fminsearch(fun,[100,3000,1,30],x,y)
 	if(!objFun){objFun=function(y,yp){return jmat.sum(y.map(function(yi,i){return Math.pow((yi-yp[i]),2)}))}}
-	if(!Opt){Opt={ // Default Options
-			maxIter:100, // maximum number of iterations
-			step:Parm0.map(function(p){return p/100}) // initial step is 1/100 of initial value (remember not to use zero in Parm0)
-		}
-	}
+	if(!Opt){Opt={}};
+	if(!Opt.maxIter){Opt.maxIter=1000};
+	if(!Opt.step){// initial step is 1/100 of initial value (remember not to use zero in Parm0)
+		Opt.step=Parm0.map(function(p){return p/100});
+		Opt.step=Opt.step.map(function(si){if(si==0){return 1}else{ return si}}); // convert null steps into 1's
+	};
+	if(!Opt.display){Opt.display=true};
+	
 	var ya,y0,yb,fP0,fP1;
 	var P0=jmat.clone(Parm0),P1=jmat.clone(Parm0);
 	var n = P0.length;
@@ -335,11 +343,9 @@ fminsearch:function(fun,Parm0,x,y,objFun,Opt){// fun = function(x,Parm)
 			}
 			else{
 				step[j]=-(0.5*step[j]); // reverse and go slower
-			}
-			console.log(i,funParm(P0),P0);
-			//console.log(j,P0);
-			//console.log(step);
+			}	
 		}
+		if(Opt.display){if(i>(Opt.maxIter-10)){console.log(i+1,funParm(P0),P0)}}
 	}
 	return P0
 },
