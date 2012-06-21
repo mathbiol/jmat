@@ -76,6 +76,10 @@ cloneArray:function(A){
 	else{return A}
 },
 
+cloneVector:function(V){// fastar than cloneArray if your array only has one dimension
+	return V.map(function(v){return v})
+},
+
 colon:function(x){// equivalent to x(:)
 	var y=[]; // to have it in the scope
 	jmat.arrayfun(x,function(x){y[y.length]=x});
@@ -333,18 +337,18 @@ fminsearch:function(fun,Parm0,x,y,Opt){// fun = function(x,Parm)
 	if(!Opt.objFun){Opt.objFun=function(y,yp){return jmat.sum(y.map(function(yi,i){return Math.pow((yi-yp[i]),2)}))}}
 	
 	var ya,y0,yb,fP0,fP1;
-	var P0=jmat.clone(Parm0),P1=jmat.clone(Parm0);
+	var P0=jmat.cloneVector(Parm0),P1=jmat.cloneVector(Parm0);
 	var n = P0.length;
 	var step=Opt.step;
 	var funParm=function(P){return Opt.objFun(y,fun(x,P))}//function (of Parameters) to minimize
 	// silly multi-univariate screening
 	for(var i=0;i<Opt.maxIter;i++){
 		for(var j=0;j<n;j++){ // take a step for each parameter
-			P1=jmat.clone(P0);
+			P1=jmat.cloneVector(P0);
 			P1[j]+=step[j];
 			if(funParm(P1)<funParm(P0)){ // parm value going in the righ direction
 				step[j]=1.2*step[j]; // go a little faster
-				P0=jmat.clone(P1);
+				P0=jmat.cloneVector(P1);
 			}
 			else{
 				step[j]=-(0.5*step[j]); // reverse and go slower
