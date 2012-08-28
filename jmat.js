@@ -575,11 +575,11 @@ lookup:function(tbl,col_in,val_in,col_out){// lookup in table tbl,
 	// for value in column col_out where the column col_in has the value val_in
 	var val_out={};// return results as a table
 	// Find Columns
-	var col_in_i=this.find(tbl.cols,col_in);
+	var col_in_i=this.find(tbl.columns,col_in);
 	if(col_in_i.length==0){throw('input column not found')}
-	// if output columns not specified use the same as the input cols
+	// if output columns not specified use the same as the input columns
 	if(!col_out){col_out=col_in;var col_out_i=col_in_i}
-	else{var col_out_i=this.find(tbl.cols,col_out)}
+	else{var col_out_i=this.find(tbl.columns,col_out)}
 	// Find which rows have those values
 	var rows = this.transpose(tbl.rows) , r=[] , Ind=[];
 	for(var c in col_in_i){
@@ -587,9 +587,9 @@ lookup:function(tbl,col_in,val_in,col_out){// lookup in table tbl,
 		if(r.length>0){for (var i in r){Ind.push(r[i])}}
 	}
 	Ind = this.unique(Ind);
-	val_out.cols=col_out_i.map(function(i){return tbl.cols[i]});
+	val_out.columns=col_out_i.map(function(i){return tbl.columns[i]});
 	val_out.rows=this.zeros(Ind.length,col_out_i.length);
-	for(var i=0;i<val_out.cols.length;i++){
+	for(var i=0;i<val_out.columns.length;i++){
 		for(var j=0;j<Ind.length;j++){
 			val_out.rows[j][i]=rows[col_out_i[i]][Ind[j]]
 		}
