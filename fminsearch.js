@@ -56,7 +56,11 @@ fminsearch.load=function(src){ // script loading
 	s.parentElement.removeChild(s);
 };
 
-fminsearch.plot=function(x,y,yp,Parms){ // ploting results using <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+fminsearch.plot=function(x,y,yp,Parms,id){ // ploting results using <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+	// defaults
+	var titulo='Model fitting';
+	if(!!Parms){titulo='Model parameters: '+Parms};
+	if(!id){var id='plot'}
 	// create Array in Google's format
 	var data = new google.visualization.DataTable();
 	data.addColumn('number', 'X');
@@ -66,11 +70,8 @@ fminsearch.plot=function(x,y,yp,Parms){ // ploting results using <script type="t
 	for (var i=0;i<n;i++){
 		data.addRow([x[i],y[i],yp[i]]);
 	};
-	//var chart = new google.visualization.ScatterChart(
-	var titulo='Model fitting';
-	if(!!Parms){titulo='Model parameters: '+Parms};
 	var chart = new google.visualization.ComboChart(
-		document.getElementById('plot'));
+		document.getElementById(id));
 	    chart.draw(data, {title: titulo,
 	                      width: 600, height: 400,
 	                      vAxis: {title: "Y", titleTextStyle: {color: "black"}},
