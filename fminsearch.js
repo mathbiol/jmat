@@ -30,14 +30,14 @@ fminsearch=function(fun,Parm0,x,y,Opt){// fun = function(x,Parm)
 	// silly multi-univariate screening
 	for(var i=0;i<Opt.maxIter;i++){
 		for(var j=0;j<n;j++){ // take a step for each parameter
-			P1=cloneVector(P0);
 			P1[j]+=step[j];
 			if(funParm(P1)<funParm(P0)){ // if parm value going in the righ direction
 				step[j]=1.2*step[j]; // then go a little faster
-				P0=cloneVector(P1);
+				P0[j]=P1[j];
 			}
 			else{
 				step[j]=-(0.5*step[j]); // otherwiese reverse and go slower
+				P1[j]=P0[j];
 			}	
 		}
 		if(Opt.display){if(i>(Opt.maxIter-10)){console.log(i+1,funParm(P0),P0)}}
