@@ -73,10 +73,16 @@ fminsearch.plot=function(x,y,yp,Parms){ // ploting results using <script type="t
 		document.getElementById('plot'));
 	    chart.draw(data, {title: titulo,
 	                      width: 600, height: 400,
-	                      vAxis: {title: "Y", titleTextStyle: {color: "green"}},
-	                      hAxis: {title: "X", titleTextStyle: {color: "green"}},
+	                      vAxis: {title: "Y", titleTextStyle: {color: "black"}},
+	                      hAxis: {title: "X", titleTextStyle: {color: "black"}},
 						  seriesType: "scatter",
 						  series: {1: {type: "line"}}}
 	              );
-}
+};
+
+fminsearch.demo=function(){ // demo example in http://jmat.googlecode.com/git/fminsearch.html
+	x=[32,37,42,47,52,57,62,67,72,77,82,87,92];y=[0,34,59,77,99,114,121,133,146,159,165,173,170]; // some data
+	fun = function(x,P){return x.map(function(xi){return (1/(1/(P[0]*(xi-P[1]))+1/P[2]))})}; // some model
+	P=fminsearch(fun,[34.6,32,173],x,y); // the regression with some starting values
+};
 

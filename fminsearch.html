@@ -4,7 +4,17 @@
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 </head>
 <body>
-fminsearch :-)
+<div>
+	<h2 style="color:maroon;font-family:verdana"><i>fminsearch</i> </h2>
+	<p style="color:navy;font-family:verdana;font-size:small">(<a href="http://jmat.googlecode.com/git/fminsearch.html">http://jmat.googlecode.com/git/fminsearch.html</a>)<br>
+	In the browser's console you could, for example, <button style="color:blue;font-family:verdana" onclick=fminsearch.demo()><b>try</b></button>:<br>
+	<ol style="color:blue;font-family:verdana;font-size:small">
+	<li> x=[32,37,42,47,52,57,62,67,72,77,82,87,92];y=[0,34,59,77,99,114,121,133,146,159,165,173,170]; // some data</li>
+	<li> fun = function(x,P){return x.map(function(xi){return (1/(1/(P[0]*(xi-P[1]))+1/P[2]))})}; // some model</li>
+	<li> P=fminsearch(fun,[34.6,32,173],x,y); // the regression with some starting values</li> 
+	</ol>
+	</p>	
+</div>	
 <div id="plot"></div>
 <script>
 google.load("visualization", "1", {packages:["corechart"]});
