@@ -1,4 +1,4 @@
-console.log('jmat :-)')
+console.log('jmat :-)');
 
 jmat = {
 	
@@ -56,6 +56,13 @@ cEl:function(x,id){
 	x = document.createElement(x);
 	if(id){x.id=id}
 	return x
+},
+
+coffee:{
+	load:function(cb,er){
+		jmat.load('https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js',cb,er);
+	}
+
 },
 
 class:function(x){
@@ -747,6 +754,48 @@ if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
 
 prod:function(x){return x.reduce(function(a,b){return a*b})},
 
+qmachine:{
+	load:function(cb,er){ // load qmachine js library
+		//jmat.load('https://qmachine.org/q.js',jmat.load('https://dl.dropbox.com/u/57930062/test.js',cb,er),er);
+		jmat.load('https://qmachine.org/q.js',cb,er);
+		return 'loading Q'
+	},
+	jobs:{},
+	reval:function(val,fun,box,jobId){
+		if(typeof(Q)=='undefined'){
+			throw('Q not loaded')
+		}
+		else{
+			return jmat.qmachine.jobs[jmat.qmachine.revalJob(val,fun,box,jobId)];
+		}
+	},
+	revalJob:function(val,fun,box,jobId){ // version of reval that directs output to a jobs object
+		if(!jobId){jobId=jmat.uid('job')};
+		//this.jobs[jobId].done=false;
+		//this.jobs[jobId]=this.reval(val,fun,box);
+		this.jobs[jobId]=function(){ // this is where the job is done !!
+			var qi = Q.avar();
+			qi.val = {f: fun, x: val};
+			qi.box = box;
+			qi.done = false;
+			//qi.onready = function (evt) { this.val = fun(this.val); return evt.exit(); };
+			//qi.onready=fun;
+			qi.onready = function (evt) {
+				this.val = this.val.f(this.val.x);
+				//this.done=true;
+				return evt.exit();
+			};
+			qi.onready = function (evt) {
+				qi.done = true;
+				return evt.exit();
+			};
+			return qi;
+		}(val,fun,box);
+		this.jobs[jobId].jobId=jobId;
+		return jobId;
+	}
+},
+
 rand:function(){
 	return jmat.dimfun(function(){return Math.random()},arguments)
 },
@@ -756,7 +805,12 @@ ranksum:function(x,y){ // this is just a first approximation while something san
 	return Math.abs(s[0]-s[1])/(x.length*y.length);
 },
 
-reval:function(x,fun,callback,url){ 
+reval:function(val,fun,box,jobId){
+	// jmat.load('https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js')
+	return this.qmachine.reval(val,fun,box,jobId);
+},
+
+reval_old:function(x,fun,callback,url){ 
 	if (!Array.isArray(x)){x=[x]} // make sure x is an array
 	if (!Array.isArray(fun)){fun=[fun]} // make sure it is an array of functions
 	if (!callback){callback=function(x){console.log(x)}}
@@ -920,6 +974,16 @@ threshold:function(im,thr){ // image segmentation by thresholding, returns binar
 	else{dt=this.imData2data(im)} // in case im is an imageData object 
 	if(!thr){thr = jmat.max(jmat.catArray(dt))/2} // default threshold is 1/10 of maximum, write something better later
 	return jmat.imMap(dt,function(xy){return (xy>thr)}); // threshold value, thr, is passed to the function through a closure
+},
+
+twitter:{
+	calls:{},
+	loadUser:function(uname,cb){
+		var callId=jmat.uid();
+		this.calls[callId]=cb;
+		//https://api.twitter.com/1/statuses/user_timeline.json?screen_name=divInformatics&include_entities=true&include_rts=true&callback=lala
+		jmat.load('https://api.twitter.com/1/statuses/user_timeline.json?screen_name='+uname+'&include_entities=true&include_rts=true&callback=jmat.twitter.calls.'+callId);
+	},
 },
 
 uid:function(prefix){
