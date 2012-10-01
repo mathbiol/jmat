@@ -58,13 +58,6 @@ cEl:function(x,id){
 	return x
 },
 
-coffee:{
-	load:function(cb,er){
-		jmat.load('https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js',cb,er);
-	}
-
-},
-
 class:function(x){
 	if(!x.constructor){return null}
 	else{return x.constructor.name}
@@ -578,6 +571,38 @@ log:function(x,n){
 	else{return Math.log(x)/Math.log(n)}
 },
 
+loadVarCallBack:{},
+
+loadVar:function(V,cb,er,cbId){ // check that an external library is loaded, V is the name of the variable, for example, "Q"
+
+	if(Array.isArray(V)){ // are there more than one?
+		if(!cbId){cbId=jmat.uid();jmat.loadVarCallBack[cbId]=cb}
+		//if(V.length==1){jmat.load(V[0],cb,er)}
+		//else if(V.length>1){jmat.load}	
+		if(V.length>0){
+			if(V.length>1){jmat.loadVar(V[0],function(){jmat.loadVar(V.slice(1),cb,er,cbId)},er,cbId)}
+			else{ // V.length=1
+				jmat.loadVar(V[0],jmat.loadVarCallBack[cbId],er);
+			}
+		}
+	}
+	else{
+		switch(V){
+			case 'Q':
+				url = 'https://qmachine.org/q.js';break;
+			case 'CoffeeScript':
+				url = 'https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js';break;
+			case 'jQuery':
+				url='jquery-1.8.2.min.js';break;
+			default :
+				throw('No library was found to assemble "'+V+'"');
+		}
+		jmat.load(url,cb,er);
+		console.log('variable "'+V+'"'+' loaded from '+url);
+	}
+	//return true;
+},
+
 lookup:function(tbl,col_in,val_in,col_out){// lookup in table tbl, 
 	// for value in column col_out where the column col_in has the value val_in
 	var val_out={};// return results as a table
@@ -757,6 +782,7 @@ prod:function(x){return x.reduce(function(a,b){return a*b})},
 qmachine:{
 	load:function(cb,er){ // load qmachine js library
 		//jmat.load('https://qmachine.org/q.js',jmat.load('https://dl.dropbox.com/u/57930062/test.js',cb,er),er);
+		//jmat.coffee.load();
 		jmat.load('https://qmachine.org/q.js',cb,er);
 		return 'loading Q'
 	},
@@ -765,10 +791,34 @@ qmachine:{
 		if(typeof(Q)=='undefined'){
 			throw('Q not loaded')
 		}
-		else{
-			return jmat.qmachine.jobs[jmat.qmachine.revalJob(val,fun,box,jobId)];
-		}
+		return jmat.qmachine.jobs[jmat.qmachine.revalJob(val,fun,box,jobId)];
 	},
+
+	submit:function(val,fun,box,jobId){
+		if(!jobId){jobId=jmat.uid('job')};
+		jmat.qmachine.jobs[jobId] = {done:false,jobId:jobId};
+		if((typeof(Q)=='undefined')||(typeof(CoffeeScript)=='undefined')){
+			jmat.loadVar(['CoffeeScript','Q'],function(){
+				if (typeof(fun)==='string'){ // if CoffeeScript
+					fun = CoffeeScript.compile(fun);
+					fun = jmat.parse(fun.slice(18,fun.length-19));
+					console.log(fun);
+				}
+				
+				jmat.qmachine.revalJob(val,fun,box,jobId);
+			})
+		}
+		else {
+			if (typeof(fun)==='string'){ // if CoffeeScript
+				fun = CoffeeScript.compile(fun);
+				fun = jmat.parse(fun.slice(18,fun.length-19));
+				console.log(fun);
+			}
+			jmat.qmachine.revalJob(val,fun,box,jobId);
+		}
+		return jmat.qmachine.jobs[jobId];
+	},
+
 	revalJob:function(val,fun,box,jobId){ // version of reval that directs output to a jobs object
 		if(!jobId){jobId=jmat.uid('job')};
 		//this.jobs[jobId].done=false;
@@ -793,6 +843,26 @@ qmachine:{
 		}(val,fun,box);
 		this.jobs[jobId].jobId=jobId;
 		return jobId;
+	},
+	fun:function(f){
+		if (typeof(f)==='string'){f = jmat.parse(jmat.coffee.compile2js(f))};
+		return f;
+	},
+	map:function(x,fun,box){ // jmat.qmachine.map(valArray,funMap)
+		//if (typeof(fun)==='string'){fun = jmat.parse(jmat.coffee.compile2js(fun))};
+		return x.map(function(xi){return jmat.reval(xi,jmat.qmachine.fun(fun),box)});
+	},
+	reduce:function(x,fun,box){
+		// check that the array is of Avar elements
+		if(x[0].constructor.name!=="AVar"){
+			x=x.map(function(xi){return Q.avar({val:xi,box:box,done:true})})
+		}
+		return x;
+
+	},
+	mapReduce:function(val,funMap,funReduce,box){ // mapReduce(x,funMap(xi){},funReduce(x1,x2){},box)
+		//4
+		//var mapRes = [1,2,3,4,5].map(function(x){return jmat.reval(x,"(x)->2*x","lala")})
 	}
 },
 
@@ -805,8 +875,10 @@ ranksum:function(x,y){ // this is just a first approximation while something san
 	return Math.abs(s[0]-s[1])/(x.length*y.length);
 },
 
+
 reval:function(val,fun,box,jobId){
 	// jmat.load('https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js')
+	if (typeof(fun)==='string'){fun = jmat.parse(jmat.coffee.compile2js(fun))};
 	return this.qmachine.reval(val,fun,box,jobId);
 },
 
@@ -978,11 +1050,13 @@ threshold:function(im,thr){ // image segmentation by thresholding, returns binar
 
 twitter:{
 	calls:{},
-	loadUser:function(uname,cb){
+	loadUser:function(uname,cb){ // load @uname, default callback is console.log
 		var callId=jmat.uid();
+		if(!cb){cb=function(x){console.log(x)}};
 		this.calls[callId]=cb;
 		//https://api.twitter.com/1/statuses/user_timeline.json?screen_name=divInformatics&include_entities=true&include_rts=true&callback=lala
 		jmat.load('https://api.twitter.com/1/statuses/user_timeline.json?screen_name='+uname+'&include_entities=true&include_rts=true&callback=jmat.twitter.calls.'+callId);
+		return 'jmat.twitter.loadUser("'+uname+'",jmat.twitter.calls.'+callId+')';
 	},
 },
 
@@ -1002,6 +1076,39 @@ unique:function(x){ // x is an Array
 		}
 	}
 	return u
+},
+
+wait:function (t,V){ // horrible way to send time (in milliseconds) burning through CPU :-(
+	if(!V){V=jmat.uid()}
+
+	
+	var startDate = new Date();
+	var currDate = new Date();
+	while (((currDate-startDate)<t)){
+		currDate = new Date();
+	}
+
+	/*
+	var startDate = new Date();
+	var currDate = new Date();
+	//var i = 0;
+	while (((currDate-startDate)<t)){
+		//i+=1;
+		currDate = new Date();
+		if()
+	}
+
+
+	/*
+	var x = false;
+	var f = function () {
+		x = true;
+	};
+	setTimeout(f, t);
+	while (x === false) {};
+	*/
+
+	return true;
 },
 
 zeros:function(){
