@@ -783,8 +783,9 @@ qmachine:{
 	load:function(cb,er){ // load qmachine js library
 		//jmat.load('https://qmachine.org/q.js',jmat.load('https://dl.dropbox.com/u/57930062/test.js',cb,er),er);
 		//jmat.coffee.load();
-		jmat.load('https://qmachine.org/q.js',cb,er);
-		return 'loading Q'
+		//jmat.load('https://qmachine.org/q.js',cb,er);
+		//return 'loading Q'
+		jmat.loadVar(['Q','CoffeeScript']);
 	},
 	jobs:{},
 	reval:function(val,fun,box,jobId){
@@ -799,21 +800,12 @@ qmachine:{
 		jmat.qmachine.jobs[jobId] = {done:false,jobId:jobId};
 		if((typeof(Q)=='undefined')||(typeof(CoffeeScript)=='undefined')){
 			jmat.loadVar(['CoffeeScript','Q'],function(){
-				if (typeof(fun)==='string'){ // if CoffeeScript
-					fun = CoffeeScript.compile(fun);
-					fun = jmat.parse(fun.slice(18,fun.length-19));
-					console.log(fun);
-				}
-				
+				fun=jmat.qmachine.fun(fun);
 				jmat.qmachine.revalJob(val,fun,box,jobId);
 			})
 		}
 		else {
-			if (typeof(fun)==='string'){ // if CoffeeScript
-				fun = CoffeeScript.compile(fun);
-				fun = jmat.parse(fun.slice(18,fun.length-19));
-				console.log(fun);
-			}
+			fun=jmat.qmachine.fun(fun);
 			jmat.qmachine.revalJob(val,fun,box,jobId);
 		}
 		return jmat.qmachine.jobs[jobId];
@@ -844,25 +836,86 @@ qmachine:{
 		this.jobs[jobId].jobId=jobId;
 		return jobId;
 	},
-	fun:function(f){
-		if (typeof(f)==='string'){f = jmat.parse(jmat.coffee.compile2js(f))};
-		return f;
+	fun:function(f){ // converts CoffeeScript to JavaScript if f is a string + other fun house cleaning
+		if(typeof(f)=='string'){
+			if(typeof(CoffeeScript)=='undefined'){jmat.loadVar('CoffeeScript');throw('CoffeeScript was missing, try again')};
+			f = CoffeeScript.compile(f);
+			f = f.slice(18,f.length-19);
+			return jmat.parse(f);
+		}
+		else{return f}
 	},
 	map:function(x,fun,box){ // jmat.qmachine.map(valArray,funMap)
 		//if (typeof(fun)==='string'){fun = jmat.parse(jmat.coffee.compile2js(fun))};
-		return x.map(function(xi){return jmat.reval(xi,jmat.qmachine.fun(fun),box)});
+		var n = x.length;
+		y = x.map(function(xi){return jmat.qmachine.submit(xi,jmat.qmachine.fun(fun),box)});
+
+		// monitor mapping
+		var done, i = 0, t = setInterval(function(){
+			i+=1;
+			done = y.slice(0,n).map(function(yi,j){return y[j].done});
+			doneStr='';
+			for(var j=0;j<n;j++){
+				if(y[j].done){doneStr+='+'}
+				else{doneStr+='-'}
+			}
+			//console.log('countMap:',jmat.sum(done));
+			console.log('M'+i+'('+doneStr+')');
+			if(jmat.sum(done)==n){clearInterval(t)};			
+		},1000);
+		return y;
 	},
 	reduce:function(x,fun,box){
 		// check that the array is of Avar elements
 		if(x[0].constructor.name!=="AVar"){
 			x=x.map(function(xi){return Q.avar({val:xi,box:box,done:true})})
 		}
-		return x;
+		var n = x.length , doneStr = '';
+		//x.map(function(xi){xi.reduceStarted=false;return false}); // prepare reduce parm
+		//var y = Q.avar({val:x , box:box , done:false}); // results wil be placed here
+		var r = x.map(function(xi){return {}}); // keep flags for reduction process here
+		var i = 0, toReduce=[], t = setInterval(function(){ // timer
+			i+=1;
+			toReduce=[]; // reset each time
+			for(var j=0;j<x.length;j++){
+				if(x[j].done&(!r[j].started)){ // if ready to be reduced and not started yet
+					toReduce.push(j);
+				}
+				if (toReduce.length==2){ // if there are two ready to go
+					r[toReduce[0]].started=r[toReduce[1]].started=true; // flag both as being reduced
+					//toReduce.map(function(ri){r[ri].started=true}); // flag both as being reduced
+					x.push(jmat.qmachine.submit([x[toReduce[0]].val,x[toReduce[1]].val],fun,box));
+					r.push({});
+					break;
+				}
+			}
+			doneStr='';
+			for(var j=0;j<x.length;j++){
+				//if((j==)&(!x[j].reduceStarted)){doneStr+='.'};
+				if((!x[j].done)&(!r[j].started)){doneStr+='.'}; // if neither done nor started
+				if((x[j].done)&(!r[j].started)){doneStr+='-'}; // if done but not started
+				if((x[j].done)&(!!r[j].started)){doneStr+='+'}; // being reduced as we speak
+				//if((x[j].done)&(x[j].started)){doneStr+='+'};
+			}
+			for(var j=doneStr.length;j<(2*n-1);j++){doneStr+=' '};
+			
+			var countReduce=jmat.sum(x.map(function(xi,j){return (xi.done)}))+jmat.sum(x.map(function(xi,j){return (!!r[j].started)}));
+			//console.log('countReduce:',countReduce);
+			if(countReduce==(4*n-3)){
+				clearInterval(t);
+				console.log('R'+i+'['+doneStr.slice(0,doneStr.length-1)+'+]');
+				console.log(x[x.length-1].val);			
+			}
+			else{console.log('R'+i+'['+doneStr+']');}
 
+
+			//if(x.length==(2*n-1)){clearInterval(t)};
+			//if(i==20){clearInterval(t)};			
+		},1000);
+		return x;
 	},
-	mapReduce:function(val,funMap,funReduce,box){ // mapReduce(x,funMap(xi){},funReduce(x1,x2){},box)
-		//4
-		//var mapRes = [1,2,3,4,5].map(function(x){return jmat.reval(x,"(x)->2*x","lala")})
+	mapReduce:function(x,funMap,funReduce,box){ // mapReduce(x,funMap(xi){},funReduce(x1,x2){},box)
+	return jmat.qmachine.reduce(jmat.qmachine.map(x,funMap,box),funReduce,box);
 	}
 },
 
@@ -876,11 +929,11 @@ ranksum:function(x,y){ // this is just a first approximation while something san
 },
 
 
-reval:function(val,fun,box,jobId){
-	// jmat.load('https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js')
-	if (typeof(fun)==='string'){fun = jmat.parse(jmat.coffee.compile2js(fun))};
-	return this.qmachine.reval(val,fun,box,jobId);
-},
+//reval:function(val,fun,box,jobId){
+//	// jmat.load('https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js')
+//	//if (typeof(fun)==='string'){fun = jmat.parse(CoffeeScript.compile(fun))};
+//	return this.qmachine.submit(val,fun,box,jobId);
+//},
 
 reval_old:function(x,fun,callback,url){ 
 	if (!Array.isArray(x)){x=[x]} // make sure x is an array
