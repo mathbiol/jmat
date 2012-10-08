@@ -18,3 +18,14 @@ MB23={ // 23and me application document object model
 
 // find out what is being provided and push it to parms
 MB23.search4parms();
+if(!!MB23.parms.code){
+	MB23.code=MB23.parms.code;
+	console.log('code = '+MB23.code);
+}
+else if (!!localStorage.getItem('code')){ // find out if there is one in the localstorage
+	MB23.code = localStorage.getItem('code');
+	console.log('code = '+MB23.code);
+}
+else{
+	throw('23andme access code not found :-(')
+}
