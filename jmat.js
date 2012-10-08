@@ -780,38 +780,41 @@ if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
 prod:function(x){return x.reduce(function(a,b){return a*b})},
 
 qmachine:{
+	step:1000, // miliseconds between calls
 	load:function(cb,er){ // load qmachine js library
-		//jmat.load('https://qmachine.org/q.js',jmat.load('https://dl.dropbox.com/u/57930062/test.js',cb,er),er);
-		//jmat.coffee.load();
-		//jmat.load('https://qmachine.org/q.js',cb,er);
-		//return 'loading Q'
-		jmat.loadVar(['Q','CoffeeScript']);
+		jmat.loadVar(['Q','CoffeeScript'],function(){
+			Q.submit=function(val,fun,box,more,jobId){return jmat.qmachine.submit(val,fun,box,more,jobId)};
+			//Q.map=function(val,fun,box,rvStep){return jmat.qmachine.map(val,fun,box,rvStep)};
+			//Q.reduce=function(val,fun,box,rvStep){return jmat.qmachine.reduce(val,fun,box,rvStep)};
+			Q.mapReduce=function(val,funMap,funReduce,box,step){return jmat.qmachine.mapReduce(val,funMap,funReduce,box,step)};
+		});
 	},
 	jobs:{},
-	reval:function(val,fun,box,jobId){
+	reval:function(val,fun,box,more,jobId){
 		if(typeof(Q)=='undefined'){
 			throw('Q not loaded')
 		}
-		return jmat.qmachine.jobs[jmat.qmachine.revalJob(val,fun,box,jobId)];
+		return jmat.qmachine.jobs[jmat.qmachine.revalJob(val,fun,box,more,jobId)];
 	},
 
-	submit:function(val,fun,box,jobId){
+	submit:function(val,fun,box,more,jobId){
 		if(!jobId){jobId=jmat.uid('job')};
 		jmat.qmachine.jobs[jobId] = {done:false,jobId:jobId};
 		if((typeof(Q)=='undefined')||(typeof(CoffeeScript)=='undefined')){
 			jmat.loadVar(['CoffeeScript','Q'],function(){
 				fun=jmat.qmachine.fun(fun);
-				jmat.qmachine.revalJob(val,fun,box,jobId);
+				jmat.qmachine.revalJob(val,fun,box,more,jobId);
 			})
 		}
 		else {
 			fun=jmat.qmachine.fun(fun);
-			jmat.qmachine.revalJob(val,fun,box,jobId);
+			jmat.qmachine.revalJob(val,fun,box,more,jobId);
 		}
 		return jmat.qmachine.jobs[jobId];
 	},
 
-	revalJob:function(val,fun,box,jobId){ // version of reval that directs output to a jobs object
+	revalJob:function(val,fun,box,more,jobId){ // version of reval that directs output to a jobs object
+		if(!more){more=[]};
 		if(!jobId){jobId=jmat.uid('job')};
 		//this.jobs[jobId].done=false;
 		//this.jobs[jobId]=this.reval(val,fun,box);
@@ -820,6 +823,7 @@ qmachine:{
 			qi.val = {f: fun, x: val};
 			qi.box = box;
 			qi.done = false;
+			qi.more=more; // to pass additional arguments
 			//qi.onready = function (evt) { this.val = fun(this.val); return evt.exit(); };
 			//qi.onready=fun;
 			qi.onready = function (evt) {
@@ -829,8 +833,13 @@ qmachine:{
 			};
 			qi.onready = function (evt) {
 				qi.done = true;
+				qi.error = false;
+				//qi.error = false;
 				return evt.exit();
 			};
+			qi.onerror = function (evt) {
+				qi.error = true;
+			}
 			return qi;
 		}(val,fun,box);
 		this.jobs[jobId].jobId=jobId;
@@ -839,33 +848,46 @@ qmachine:{
 	fun:function(f){ // converts CoffeeScript to JavaScript if f is a string + other fun house cleaning
 		if(typeof(f)=='string'){
 			if(typeof(CoffeeScript)=='undefined'){jmat.loadVar('CoffeeScript');throw('CoffeeScript was missing, try again')};
-			f = CoffeeScript.compile(f);
-			f = f.slice(18,f.length-19);
-			return jmat.parse(f);
+			return CoffeeScript.eval(f);
 		}
-		else{return f}
+		else{ // assuming it is a function, kiss ass of JSLint zealots and add a ; before closing }
+			return jmat.parse(f.toString().replace(/([^;]{2})}/,'$1;}'));
+		}
 	},
-	map:function(x,fun,box){ // jmat.qmachine.map(valArray,funMap)
+	map:function(x,fun,box,step){ // jmat.qmachine.map(valArray,funMap)
 		//if (typeof(fun)==='string'){fun = jmat.parse(jmat.coffee.compile2js(fun))};
+		if(!step){step=jmat.qmachine.step}; // control default step at jmat.qmachine.step
+		fun = jmat.qmachine.fun(fun);
 		var n = x.length;
-		y = x.map(function(xi){return jmat.qmachine.submit(xi,jmat.qmachine.fun(fun),box)});
+		y = x.map(function(xi){return jmat.qmachine.submit(xi,fun,box,xi)}); // note original value being kept as more, the 4th input argument
+		// revive
+		var trv=setInterval
 
 		// monitor mapping
-		var done, i = 0, t = setInterval(function(){
+		var done, doneStr='', i = 0;t = setInterval(function(){
 			i+=1;
 			done = y.slice(0,n).map(function(yi,j){return y[j].done});
 			doneStr='';
 			for(var j=0;j<n;j++){
-				if(y[j].done){doneStr+='+'}
-				else{doneStr+='-'}
+				if(y[j].done){doneStr+='<'+y[j].val+'>'}
+				else{if(y[j].error){ // if error
+						y[j].error=false;
+						//y[j]=jmat.qmachine.submit(y[j].more,fun,box,step);
+						console.log('Mapping error at #'+i+':',y[i]);
+						doneStr+='*'; // "*" indicates error
+					}
+					else{doneStr+='-'} // not done yet	
+				}
 			}
 			//console.log('countMap:',jmat.sum(done));
 			console.log('M'+i+'('+doneStr+')');
 			if(jmat.sum(done)==n){clearInterval(t)};			
-		},1000);
+		},step);
 		return y;
+
 	},
-	reduce:function(x,fun,box){
+	reduce:function(x,fun,box,step){
+		if(!step){step=jmat.qmachine.step}; // control default step at jmat.qmachine.step
 		// check that the array is of Avar elements
 		if(x[0].constructor.name!=="AVar"){
 			x=x.map(function(xi){return Q.avar({val:xi,box:box,done:true})})
@@ -878,13 +900,13 @@ qmachine:{
 			i+=1;
 			toReduce=[]; // reset each time
 			for(var j=0;j<x.length;j++){
-				if(x[j].done&(!r[j].started)){ // if ready to be reduced and not started yet
+				if(x[j].done&(!r[j].started)&(!x[j].error)){ // if ready to be reduced and not started yet
 					toReduce.push(j);
 				}
 				if (toReduce.length==2){ // if there are two ready to go
 					r[toReduce[0]].started=r[toReduce[1]].started=true; // flag both as being reduced
 					//toReduce.map(function(ri){r[ri].started=true}); // flag both as being reduced
-					x.push(jmat.qmachine.submit([x[toReduce[0]].val,x[toReduce[1]].val],fun,box));
+					x.push(jmat.qmachine.submit([x[toReduce[0]].val,x[toReduce[1]].val],fun,box,toReduce)); // notice indexes of values being reduced send as the "more" argument
 					r.push({});
 					break;
 				}
@@ -892,30 +914,36 @@ qmachine:{
 			doneStr='';
 			for(var j=0;j<x.length;j++){
 				//if((j==)&(!x[j].reduceStarted)){doneStr+='.'};
+				if((r[j].started)&(x[j].error)){ // if error
+					console.log('Reduce error found at #'+j+':',x[j]);
+					doneStr+='*';
+					// do something about it here !
+				};
 				if((!x[j].done)&(!r[j].started)){doneStr+='.'}; // if neither done nor started
 				if((x[j].done)&(!r[j].started)){doneStr+='-'}; // if done but not started
-				if((x[j].done)&(!!r[j].started)){doneStr+='+'}; // being reduced as we speak
-				//if((x[j].done)&(x[j].started)){doneStr+='+'};
+				//if((x[j].done)&(!!r[j].started)){doneStr+='+'}; // being reduced as we speak
+				if((x[j].done)&(!!r[j].started)){doneStr+='<'+x[j].val+'>'}; // being reduced as we speak
+				if(j==n-1){doneStr+=':'};
+				
 			}
-			for(var j=doneStr.length;j<(2*n-1);j++){doneStr+=' '};
+			for(var j=r.length;j<(2*n-1);j++){doneStr+=' '};
 			
 			var countReduce=jmat.sum(x.map(function(xi,j){return (xi.done)}))+jmat.sum(x.map(function(xi,j){return (!!r[j].started)}));
 			//console.log('countReduce:',countReduce);
 			if(countReduce==(4*n-3)){
 				clearInterval(t);
-				console.log('R'+i+'['+doneStr.slice(0,doneStr.length-1)+'+]');
+				//console.log('R'+i+'['+doneStr.slice(0,doneStr.length-1)+'+]');
+				console.log('R'+i+'['+doneStr.slice(0,doneStr.length-1)+'<'+x[x.length-1].val+'>]');
 				console.log(x[x.length-1].val);			
 			}
 			else{console.log('R'+i+'['+doneStr+']');}
+	
+		},step);
 
-
-			//if(x.length==(2*n-1)){clearInterval(t)};
-			//if(i==20){clearInterval(t)};			
-		},1000);
 		return x;
 	},
-	mapReduce:function(x,funMap,funReduce,box){ // mapReduce(x,funMap(xi){},funReduce(x1,x2){},box)
-	return jmat.qmachine.reduce(jmat.qmachine.map(x,funMap,box),funReduce,box);
+	mapReduce:function(x,funMap,funReduce,box,step){ // mapReduce(x,funMap(xi){},funReduce(x1,x2){},box)
+	return jmat.qmachine.reduce(jmat.qmachine.map(x,funMap,box,step),funReduce,box,step);
 	}
 },
 
@@ -929,10 +957,10 @@ ranksum:function(x,y){ // this is just a first approximation while something san
 },
 
 
-//reval:function(val,fun,box,jobId){
+//reval:function(val,fun,box,more,jobId){
 //	// jmat.load('https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js')
 //	//if (typeof(fun)==='string'){fun = jmat.parse(CoffeeScript.compile(fun))};
-//	return this.qmachine.submit(val,fun,box,jobId);
+//	return this.qmachine.submit(val,fun,box,more,jobId);
 //},
 
 reval_old:function(x,fun,callback,url){ 
