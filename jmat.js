@@ -1,4 +1,4 @@
-console.log('jmat :-)')
+console.log('jmat :-)');
 
 jmat = {
 	
@@ -74,6 +74,10 @@ clone2:function(x){ // clone object that may have functional elements
 cloneArray:function(A){
 	if(Array.isArray(A)){return A.map(function(x){return jmat.cloneArray(x)})}
 	else{return A}
+},
+
+cloneVector:function(V){// fastar than cloneArray if your array only has one dimension
+	return V.map(function(v){return v})
 },
 
 colon:function(x){// equivalent to x(:)
@@ -260,6 +264,11 @@ edge:function(M){//find edge in bidimensional binary matrix such as what is prod
 	return E
 },
 
+exist:function(x){ // does it exist? note x is the variable name, not the variable itself
+	if(eval('typeof('+x+')')=='undefined'){return false}
+	else{return true}
+},
+
 extractSegs:function(bw){ // extracts segmented features from a [0,1] matrix and retruns them as an Array
 	if(typeof(segFeatures)=='undefined'){var segFeatures=[]} // collect extracted features here
 	var m = jmat.max2(bw);
@@ -388,6 +397,51 @@ find:function(x,patt,modifier){ // find wich elements of an array match a patter
 	}
 	return y
 },
+
+fminsearch:function(fun,Parm0,x,y,Opt){// fun = function(x,Parm)
+	// example
+	//
+	// x = [32,37,42,47,52,57,62,67,72,77,82,87,92]
+	// y=[749,1525,1947,2201,2380,2537,2671,2758,2803,2943,3007,2979,2992]
+	// fun = function(x,P){return x.map(function(xi){return (P[0]+P[1]*(1-Math.exp(-P[2]*(xi-P[3]))))})}
+	// Parms=jmat.fminsearch(fun,[100,3000,1,30],x,y)
+	//
+	// Opt is an object will all other parameters, from the objective function (cost function), to the 
+	// number of iterations, initial step vector and the display switch, for example
+	// Parms=jmat.fminsearch(fun,[100,3000,1,30],x,y,{maxIter:5000,display:false})
+	
+	if(!Opt){Opt={}};
+	if(!Opt.maxIter){Opt.maxIter=1000};
+	if(!Opt.step){// initial step is 1/100 of initial value (remember not to use zero in Parm0)
+		Opt.step=Parm0.map(function(p){return p/100});
+		Opt.step=Opt.step.map(function(si){if(si==0){return 1}else{ return si}}); // convert null steps into 1's
+	};
+	if(typeof(Opt.display)=='undefined'){Opt.display=true};
+	if(!Opt.objFun){Opt.objFun=function(y,yp){return jmat.sum(y.map(function(yi,i){return Math.pow((yi-yp[i]),2)}))}}
+	
+	var ya,y0,yb,fP0,fP1;
+	var P0=jmat.cloneVector(Parm0),P1=jmat.cloneVector(Parm0);
+	var n = P0.length;
+	var step=Opt.step;
+	var funParm=function(P){return Opt.objFun(y,fun(x,P))}//function (of Parameters) to minimize
+	// silly multi-univariate screening
+	for(var i=0;i<Opt.maxIter;i++){
+		for(var j=0;j<n;j++){ // take a step for each parameter
+			P1=jmat.cloneVector(P0);
+			P1[j]+=step[j];
+			if(funParm(P1)<funParm(P0)){ // parm value going in the righ direction
+				step[j]=1.2*step[j]; // go a little faster
+				P0=jmat.cloneVector(P1);
+			}
+			else{
+				step[j]=-(0.5*step[j]); // reverse and go slower
+			}	
+		}
+		if(Opt.display){if(i>(Opt.maxIter-10)){console.log(i+1,funParm(P0),P0)}}
+	}
+	return P0
+},
+
 
 get:function(key,callback,url){ // get content at url or key
 	if (!callback){callback=function(x){console.log(x)}}
@@ -600,15 +654,47 @@ log:function(x,n){
 	else{return Math.log(x)/Math.log(n)}
 },
 
+loadVarCallBack:{},
+
+loadVar:function(V,cb,er,cbId){ // check that an external library is loaded, V is the name of the variable, for example, "Q"
+
+	if(Array.isArray(V)){ // are there more than one?
+		if(!cbId){cbId=jmat.uid();jmat.loadVarCallBack[cbId]=cb}
+		//if(V.length==1){jmat.load(V[0],cb,er)}
+		//else if(V.length>1){jmat.load}	
+		if(V.length>0){
+			if(V.length>1){jmat.loadVar(V[0],function(){jmat.loadVar(V.slice(1),cb,er,cbId)},er,cbId)}
+			else{ // V.length=1
+				jmat.loadVar(V[0],jmat.loadVarCallBack[cbId],er);
+			}
+		}
+	}
+	else{
+		switch(V){
+			case 'Q':
+				url = 'https://qmachine.org/q.js';break;
+			case 'CoffeeScript':
+				url = 'https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js';break;
+			case 'jQuery':
+				url='jquery-1.8.2.min.js';break;
+			default :
+				throw('No library was found to assemble "'+V+'"');
+		}
+		jmat.load(url,cb,er);
+		console.log('variable "'+V+'"'+' loaded from '+url);
+	}
+	//return true;
+},
+
 lookup:function(tbl,col_in,val_in,col_out){// lookup in table tbl, 
 	// for value in column col_out where the column col_in has the value val_in
 	var val_out={};// return results as a table
 	// Find Columns
-	var col_in_i=this.find(tbl.cols,col_in);
+	var col_in_i=this.find(tbl.columns,col_in);
 	if(col_in_i.length==0){throw('input column not found')}
-	// if output columns not specified use the same as the input cols
+	// if output columns not specified use the same as the input columns
 	if(!col_out){col_out=col_in;var col_out_i=col_in_i}
-	else{var col_out_i=this.find(tbl.cols,col_out)}
+	else{var col_out_i=this.find(tbl.columns,col_out)}
 	// Find which rows have those values
 	var rows = this.transpose(tbl.rows) , r=[] , Ind=[];
 	for(var c in col_in_i){
@@ -616,11 +702,11 @@ lookup:function(tbl,col_in,val_in,col_out){// lookup in table tbl,
 		if(r.length>0){for (var i in r){Ind.push(r[i])}}
 	}
 	Ind = this.unique(Ind);
-	val_out.cols=col_out_i.map(function(i){return tbl.cols[i]});
-	val_out.rows=this.zeros(col_out_i.length,Ind.length);
-	for(var i=0;i<val_out.cols.length;i++){
+	val_out.columns=col_out_i.map(function(i){return tbl.columns[i]});
+	val_out.rows=this.zeros(Ind.length,col_out_i.length);
+	for(var i=0;i<val_out.columns.length;i++){
 		for(var j=0;j<Ind.length;j++){
-			val_out.rows[i][j]=rows[col_out_i[i]][Ind[j]]
+			val_out.rows[j][i]=rows[col_out_i[i]][Ind[j]]
 		}
 	}
 	return val_out;
@@ -776,6 +862,174 @@ if(this.class(ctx)!="CanvasRenderingContext2D"){ // get context then
 
 prod:function(x){return x.reduce(function(a,b){return a*b})},
 
+qmachine:{
+	step:1000, // miliseconds between calls
+	load:function(cb,er){ // load qmachine js library
+		jmat.loadVar(['Q','CoffeeScript'],function(){
+			Q.submit=function(val,fun,box,more,jobId){return jmat.qmachine.submit(val,fun,box,more,jobId)};
+			//Q.map=function(val,fun,box,rvStep){return jmat.qmachine.map(val,fun,box,rvStep)};
+			//Q.reduce=function(val,fun,box,rvStep){return jmat.qmachine.reduce(val,fun,box,rvStep)};
+			Q.mapReduce=function(val,funMap,funReduce,box,step){return jmat.qmachine.mapReduce(val,funMap,funReduce,box,step)};
+		});
+	},
+	jobs:{},
+	reval:function(val,fun,box,more,jobId){
+		if(typeof(Q)=='undefined'){
+			throw('Q not loaded')
+		}
+		return jmat.qmachine.jobs[jmat.qmachine.revalJob(val,fun,box,more,jobId)];
+	},
+
+	submit:function(val,fun,box,more,jobId){
+		if(!jobId){jobId=jmat.uid('job')};
+		jmat.qmachine.jobs[jobId] = {done:false,jobId:jobId};
+		if((typeof(Q)=='undefined')||(typeof(CoffeeScript)=='undefined')){
+			jmat.loadVar(['CoffeeScript','Q'],function(){
+				fun=jmat.qmachine.fun(fun);
+				jmat.qmachine.revalJob(val,fun,box,more,jobId);
+			})
+		}
+		else {
+			fun=jmat.qmachine.fun(fun);
+			jmat.qmachine.revalJob(val,fun,box,more,jobId);
+		}
+		return jmat.qmachine.jobs[jobId];
+	},
+
+	revalJob:function(val,fun,box,more,jobId){ // version of reval that directs output to a jobs object
+		if(!more){more=[]};
+		if(!jobId){jobId=jmat.uid('job')};
+		//this.jobs[jobId].done=false;
+		//this.jobs[jobId]=this.reval(val,fun,box);
+		this.jobs[jobId]=function(){ // this is where the job is done !!
+			var qi = Q.avar();
+			qi.val = {f: fun, x: val};
+			qi.box = box;
+			qi.done = false;
+			qi.more=more; // to pass additional arguments
+			//qi.onready = function (evt) { this.val = fun(this.val); return evt.exit(); };
+			//qi.onready=fun;
+			qi.onready = function (evt) {
+				this.val = this.val.f(this.val.x);
+				//this.done=true;
+				return evt.exit();
+			};
+			qi.onready = function (evt) {
+				qi.done = true;
+				qi.error = false;
+				//qi.error = false;
+				return evt.exit();
+			};
+			qi.onerror = function (evt) {
+				qi.error = true;
+			}
+			return qi;
+		}(val,fun,box);
+		this.jobs[jobId].jobId=jobId;
+		return jobId;
+	},
+	fun:function(f){ // converts CoffeeScript to JavaScript if f is a string + other fun house cleaning
+		if(typeof(f)=='string'){
+			if(typeof(CoffeeScript)=='undefined'){jmat.loadVar('CoffeeScript');throw('CoffeeScript was missing, try again')};
+			return CoffeeScript.eval(f);
+		}
+		else{ // assuming it is a function, kiss ass of JSLint zealots and add a ; before closing }
+			return jmat.parse(f.toString().replace(/([^;]{2})}/,'$1;}'));
+		}
+	},
+	map:function(x,fun,box,step){ // jmat.qmachine.map(valArray,funMap)
+		//if (typeof(fun)==='string'){fun = jmat.parse(jmat.coffee.compile2js(fun))};
+		if(!step){step=jmat.qmachine.step}; // control default step at jmat.qmachine.step
+		fun = jmat.qmachine.fun(fun);
+		var n = x.length;
+		y = x.map(function(xi){return jmat.qmachine.submit(xi,fun,box,xi)}); // note original value being kept as more, the 4th input argument
+		// revive
+		var trv=setInterval
+
+		// monitor mapping
+		var done, doneStr='', i = 0;t = setInterval(function(){
+			i+=1;
+			done = y.slice(0,n).map(function(yi,j){return y[j].done});
+			doneStr='';
+			for(var j=0;j<n;j++){
+				if(y[j].done){doneStr+='<'+y[j].val+'>'}
+				else{if(y[j].error){ // if error
+						y[j].error=false;
+						//y[j]=jmat.qmachine.submit(y[j].more,fun,box,step);
+						console.log('Mapping error at #'+i+':',y[i]);
+						doneStr+='*'; // "*" indicates error
+					}
+					else{doneStr+='-'} // not done yet	
+				}
+			}
+			//console.log('countMap:',jmat.sum(done));
+			console.log('M'+i+'('+doneStr+')');
+			if(jmat.sum(done)==n){clearInterval(t)};			
+		},step);
+		return y;
+
+	},
+	reduce:function(x,fun,box,step){
+		if(!step){step=jmat.qmachine.step}; // control default step at jmat.qmachine.step
+		// check that the array is of Avar elements
+		if(x[0].constructor.name!=="AVar"){
+			x=x.map(function(xi){return Q.avar({val:xi,box:box,done:true})})
+		}
+		var n = x.length , doneStr = '';
+		//x.map(function(xi){xi.reduceStarted=false;return false}); // prepare reduce parm
+		//var y = Q.avar({val:x , box:box , done:false}); // results wil be placed here
+		var r = x.map(function(xi){return {}}); // keep flags for reduction process here
+		var i = 0, toReduce=[], t = setInterval(function(){ // timer
+			i+=1;
+			toReduce=[]; // reset each time
+			for(var j=0;j<x.length;j++){
+				if(x[j].done&(!r[j].started)&(!x[j].error)){ // if ready to be reduced and not started yet
+					toReduce.push(j);
+				}
+				if (toReduce.length==2){ // if there are two ready to go
+					r[toReduce[0]].started=r[toReduce[1]].started=true; // flag both as being reduced
+					//toReduce.map(function(ri){r[ri].started=true}); // flag both as being reduced
+					x.push(jmat.qmachine.submit([x[toReduce[0]].val,x[toReduce[1]].val],fun,box,toReduce)); // notice indexes of values being reduced send as the "more" argument
+					r.push({});
+					break;
+				}
+			}
+			doneStr='';
+			for(var j=0;j<x.length;j++){
+				//if((j==)&(!x[j].reduceStarted)){doneStr+='.'};
+				if((r[j].started)&(x[j].error)){ // if error
+					console.log('Reduce error found at #'+j+':',x[j]);
+					doneStr+='*';
+					// do something about it here !
+				};
+				if((!x[j].done)&(!r[j].started)){doneStr+='.'}; // if neither done nor started
+				if((x[j].done)&(!r[j].started)){doneStr+='-'}; // if done but not started
+				//if((x[j].done)&(!!r[j].started)){doneStr+='+'}; // being reduced as we speak
+				if((x[j].done)&(!!r[j].started)){doneStr+='<'+x[j].val+'>'}; // being reduced as we speak
+				if(j==n-1){doneStr+=':'};
+				
+			}
+			for(var j=r.length;j<(2*n-1);j++){doneStr+=' '};
+			
+			var countReduce=jmat.sum(x.map(function(xi,j){return (xi.done)}))+jmat.sum(x.map(function(xi,j){return (!!r[j].started)}));
+			//console.log('countReduce:',countReduce);
+			if(countReduce==(4*n-3)){
+				clearInterval(t);
+				//console.log('R'+i+'['+doneStr.slice(0,doneStr.length-1)+'+]');
+				console.log('R'+i+'['+doneStr.slice(0,doneStr.length-1)+'<'+x[x.length-1].val+'>]');
+				console.log(x[x.length-1].val);			
+			}
+			else{console.log('R'+i+'['+doneStr+']');}
+	
+		},step);
+
+		return x;
+	},
+	mapReduce:function(x,funMap,funReduce,box,step){ // mapReduce(x,funMap(xi){},funReduce(x1,x2){},box)
+	return jmat.qmachine.reduce(jmat.qmachine.map(x,funMap,box,step),funReduce,box,step);
+	}
+},
+
 rand:function(){
 	return jmat.dimfun(function(){return Math.random()},arguments)
 },
@@ -785,7 +1039,14 @@ ranksum:function(x,y){ // this is just a first approximation while something san
 	return Math.abs(s[0]-s[1])/(x.length*y.length);
 },
 
-reval:function(x,fun,callback,url){ 
+
+//reval:function(val,fun,box,more,jobId){
+//	// jmat.load('https://raw.github.com/jashkenas/coffee-script/master/extras/coffee-script.js')
+//	//if (typeof(fun)==='string'){fun = jmat.parse(CoffeeScript.compile(fun))};
+//	return this.qmachine.submit(val,fun,box,more,jobId);
+//},
+
+reval_old:function(x,fun,callback,url){ 
 	if (!Array.isArray(x)){x=[x]} // make sure x is an array
 	if (!Array.isArray(fun)){fun=[fun]} // make sure it is an array of functions
 	if (!callback){callback=function(x){console.log(x)}}
@@ -951,6 +1212,18 @@ threshold:function(im,thr){ // image segmentation by thresholding, returns binar
 	return jmat.imMap(dt,function(xy){return (xy>thr)}); // threshold value, thr, is passed to the function through a closure
 },
 
+twitter:{
+	calls:{},
+	loadUser:function(uname,cb){ // load @uname, default callback is console.log
+		var callId=jmat.uid();
+		if(!cb){cb=function(x){console.log(x)}};
+		this.calls[callId]=cb;
+		//https://api.twitter.com/1/statuses/user_timeline.json?screen_name=divInformatics&include_entities=true&include_rts=true&callback=lala
+		jmat.load('https://api.twitter.com/1/statuses/user_timeline.json?screen_name='+uname+'&include_entities=true&include_rts=true&callback=jmat.twitter.calls.'+callId);
+		return 'jmat.twitter.loadUser("'+uname+'",jmat.twitter.calls.'+callId+')';
+	},
+},
+
 uid:function(prefix){
 	if(!prefix){prefix='UID'}
 	var uid=prefix+Math.random().toString().slice(2);
@@ -967,6 +1240,39 @@ unique:function(x){ // x is an Array
 		}
 	}
 	return u
+},
+
+wait:function (t,V){ // horrible way to send time (in milliseconds) burning through CPU :-(
+	if(!V){V=jmat.uid()}
+
+	
+	var startDate = new Date();
+	var currDate = new Date();
+	while (((currDate-startDate)<t)){
+		currDate = new Date();
+	}
+
+	/*
+	var startDate = new Date();
+	var currDate = new Date();
+	//var i = 0;
+	while (((currDate-startDate)<t)){
+		//i+=1;
+		currDate = new Date();
+		if()
+	}
+
+
+	/*
+	var x = false;
+	var f = function () {
+		x = true;
+	};
+	setTimeout(f, t);
+	while (x === false) {};
+	*/
+
+	return true;
 },
 
 zeros:function(){
