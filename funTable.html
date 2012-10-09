@@ -1,0 +1,19 @@
+<html>
+<body>
+	<p>Fun With Tables</p>
+	<input type="file" id="files" multiple onchange="funTable.loadFiles(this.files,'readAsText')"></input>
+	
+	<div id='work'>
+	</div>
+	
+	<div id="chat">
+	<textarea id='console' style="border:none;color:blue" cols=50>></textarea><button onclick="funTable.clearConsole(this)">(x)</button><br>
+	<textarea id='msg'cols=50 style="border:none;color:navy" rows=10></textarea><button onclick="jmat.gId('msg').textContent='';jmat.gId('console').focus()">(x)</button>
+	</div>
+	
+	<iframe id="loadingFrame" style="display:none"></iframe>
+	
+	<script src="jmat.js"></script>
+	<script src="funTable.js"></script>
+</body>
+</html>
