@@ -1,0 +1,19 @@
+#-  Git configuration file
+
+#-  .gitignore ~~
+#                                                   ~~ last updated 08 Oct 2012
+
+#-  Mercurial repository itself (if present)
+.hg/
+
+#-  Vim swap files
+*.swp
+
+#-  OS generated files
+.DS_Store*
+ehthumbs.db
+Icon\?
+.localized
+Thumbs.db
+
+#-  vim:set syntax=gitconfig:
